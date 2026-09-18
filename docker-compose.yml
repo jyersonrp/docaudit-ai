@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: docaudit-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=8000
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - DEFAULT_LLM_PROVIDER=${DEFAULT_LLM_PROVIDER:-auto}
+      - VECTOR_STORE_TYPE=pgvector
+      - DATABASE_URL=postgresql://docaudit_user:docaudit_password@postgres:5432/docaudit_db
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - docaudit_storage:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - docaudit-network
+
+  # React / Vite Frontend Dashboard
+  frontend:
+    image: node:20-alpine
+    container_name: docaudit-frontend
+    restart: unless-stopped
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend
+    networks:
+      - docaudit-network
+
+  # PostgreSQL 16 with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: docaudit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: docaudit_user
+      POSTGRES_PASSWORD: docaudit_password
+      POSTGRES_DB: docaudit_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - docaudit_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docaudit_user -d docaudit_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - docaudit-network
+
+  # Redis for Background Worker Caching & Queues
+  redis:
+    image: redis:7-alpine
+    container_name: docaudit-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - docaudit_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - docaudit-network
+
+networks:
+  docaudit-network:
+    driver: bridge
+
+volumes:
+  docaudit_storage:
+  docaudit_pgdata:
+  docaudit_redisdata:
