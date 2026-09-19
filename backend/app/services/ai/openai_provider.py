@@ -32,10 +32,9 @@ class OpenAIProvider(BaseLLMProvider):
         if not self._client:
             raise RuntimeError("OpenAI Client is not initialized. Please configure OPENAI_API_KEY.")
 
-        prompt = (
-            "You are a Senior Legal Tech Auditor. Analyze this contract and output a JSON matching the requested schema.\n\n"
-            f"DOCUMENT:\n{document_text[:30000]}"
-        )
+        from app.core.security import build_secure_audit_prompt
+        system_instruction = "You are a Senior Legal Tech Auditor. Analyze this contract and output a JSON matching the requested schema."
+        prompt = build_secure_audit_prompt(system_instruction, document_text, max_chars=30000)
 
         try:
             response = await self._client.beta.chat.completions.parse(
@@ -55,10 +54,9 @@ class OpenAIProvider(BaseLLMProvider):
         if not self._client:
             raise RuntimeError("OpenAI Client is not initialized. Please configure OPENAI_API_KEY.")
 
-        prompt = (
-            "You are an Executive Financial Auditor. Audit this report and output a JSON matching the requested schema.\n\n"
-            f"DOCUMENT:\n{document_text[:30000]}"
-        )
+        from app.core.security import build_secure_audit_prompt
+        system_instruction = "You are an Executive Financial Auditor. Audit this report and output a JSON matching the requested schema."
+        prompt = build_secure_audit_prompt(system_instruction, document_text, max_chars=30000)
 
         try:
             response = await self._client.beta.chat.completions.parse(
@@ -78,11 +76,10 @@ class OpenAIProvider(BaseLLMProvider):
         if not self._client:
             raise RuntimeError("OpenAI Client is not initialized. Please configure OPENAI_API_KEY.")
 
+        from app.core.security import build_secure_audit_prompt
         rule_instruction = custom_prompt or "Audit the document for compliance and risk."
-        prompt = (
-            f"Custom audit instructions: {rule_instruction}\n\n"
-            f"DOCUMENT:\n{document_text[:30000]}"
-        )
+        system_instruction = f"Custom audit instructions: {rule_instruction}"
+        prompt = build_secure_audit_prompt(system_instruction, document_text, max_chars=30000)
 
         try:
             response = await self._client.beta.chat.completions.parse(
@@ -102,14 +99,15 @@ class OpenAIProvider(BaseLLMProvider):
         if not self._client:
             raise RuntimeError("OpenAI Client is not initialized. Please configure OPENAI_API_KEY.")
 
-        context_text = "\n\n".join([
+        from app.core.security import build_secure_rag_prompt
+        snippets = [
             f"[Page {c.page_number} | Section: {c.section or 'General'}]: {c.content}"
             for c in context_chunks
-        ])
+        ]
+        prompt = build_secure_rag_prompt(question, snippets)
 
         messages = [
-            {"role": "system", "content": "You are DocAudit AI assistant. Answer using the provided context and cite page numbers."},
-            {"role": "user", "content": f"Context:\n{context_text}\n\nQuestion: {question}"}
+            {"role": "user", "content": prompt}
         ]
 
         try:

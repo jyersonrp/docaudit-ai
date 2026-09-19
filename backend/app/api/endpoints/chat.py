@@ -6,6 +6,8 @@ from app.workers.audit_worker import AuditWorker
 from app.services.vector.store import vector_store
 from app.services.ai.factory import LLMFactory
 
+from app.core.security import sanitize_prompt_delimiters
+
 router = APIRouter()
 
 @router.post("/query", response_model=ChatResponse)
@@ -18,9 +20,13 @@ async def query_document(request: ChatQueryRequest):
     if not meta:
         raise HTTPException(status_code=404, detail=f"Document '{request.doc_id}' not found")
 
+    sanitized_q = sanitize_prompt_delimiters(request.question.strip())
+    if not sanitized_q:
+        raise HTTPException(status_code=400, detail="Question cannot be empty.")
+
     # Search top chunks
     scored_chunks = vector_store.search(
-        query=request.question,
+        query=sanitized_q,
         doc_id=request.doc_id,
         top_k=request.top_k
     )
@@ -28,7 +34,7 @@ async def query_document(request: ChatQueryRequest):
     if not scored_chunks:
         return ChatResponse(
             doc_id=request.doc_id,
-            question=request.question,
+            question=sanitized_q,
             answer="No relevant text found in this document for your query.",
             citations=[],
             provider_used="none"
@@ -52,16 +58,16 @@ async def query_document(request: ChatQueryRequest):
     provider = LLMFactory.get_provider(request.provider)
     provider_used_name = provider.provider_name
     try:
-        answer = await provider.chat(request.question, context_chunks)
+        answer = await provider.chat(sanitized_q, context_chunks)
     except Exception as e:
         # Fallback to local heuristic answer
         mock_p = LLMFactory.get_provider("mock")
-        answer = await mock_p.chat(request.question, context_chunks)
+        answer = await mock_p.chat(sanitized_q, context_chunks)
         provider_used_name = f"{provider.provider_name} (fallback: mock)"
 
     return ChatResponse(
         doc_id=request.doc_id,
-        question=request.question,
+        question=sanitized_q,
         answer=answer,
         citations=citations,
         provider_used=provider_used_name

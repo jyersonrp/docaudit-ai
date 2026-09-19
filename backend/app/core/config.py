@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any, List
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -32,6 +33,23 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 50
     CHUNK_SIZE: int = 800 # characters
     CHUNK_OVERLAP: int = 150 # characters
+    RATE_LIMIT_PER_MINUTE: int = 120
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://localhost:8000"
+    ]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            if v.startswith("[") and v.endswith("]"):
+                import json
+                return json.loads(v)
+            return [i.strip() for i in v.split(",") if i.strip()]
+        return v
     
     # Vector store type: "local" or "pgvector"
     VECTOR_STORE_TYPE: str = os.getenv("VECTOR_STORE_TYPE", "local")

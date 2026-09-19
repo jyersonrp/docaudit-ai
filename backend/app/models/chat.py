@@ -9,10 +9,10 @@ class Citation(BaseModel):
     section: Optional[str] = None
 
 class ChatQueryRequest(BaseModel):
-    question: str
-    doc_id: str
-    top_k: int = 4
-    provider: Optional[str] = None
+    question: str = Field(..., min_length=1, max_length=4000, description="User question")
+    doc_id: str = Field(..., min_length=1, max_length=64, description="Document ID")
+    top_k: int = Field(default=4, ge=1, le=20, description="Top K relevant chunks")
+    provider: Optional[str] = Field(default=None, max_length=50)
 
 class ChatResponse(BaseModel):
     doc_id: str

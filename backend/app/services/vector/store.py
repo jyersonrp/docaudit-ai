@@ -62,6 +62,8 @@ class LocalVectorStore(BaseVectorStore):
     def add_chunks(self, chunks: List[DocumentChunk]) -> None:
         if not chunks:
             return
+        from app.services.cache.memory_cache import query_cache
+        query_cache.clear()
         with self._get_connection() as conn:
             data = [
                 (
@@ -101,6 +103,8 @@ class LocalVectorStore(BaseVectorStore):
             ]
 
     def delete_doc(self, doc_id: str) -> None:
+        from app.services.cache.memory_cache import query_cache
+        query_cache.clear()
         with self._get_connection() as conn:
             conn.execute("DELETE FROM chunks WHERE doc_id = ?", (doc_id,))
             conn.commit()
@@ -116,6 +120,12 @@ class LocalVectorStore(BaseVectorStore):
         Otherwise, uses normalized TF-IDF vector cosine similarity + lexical matching.
         Only returns chunks with positive relevance (score > 0).
         """
+        from app.services.cache.memory_cache import query_cache
+        cache_key = f"search:{doc_id or 'all'}:{top_k}:{query.strip().lower()}"
+        cached_val = query_cache.get(cache_key)
+        if cached_val is not None:
+            return cached_val
+
         with self._get_connection() as conn:
             if doc_id:
                 cursor = conn.execute("SELECT * FROM chunks WHERE doc_id = ?", (doc_id,))
@@ -186,7 +196,9 @@ class LocalVectorStore(BaseVectorStore):
 
         # Sort descending by score
         scored_chunks.sort(key=lambda x: x[1], reverse=True)
-        return scored_chunks[:top_k]
+        top_results = scored_chunks[:top_k]
+        query_cache.set(cache_key, top_results)
+        return top_results
 
 # Global store singleton
 vector_store = LocalVectorStore()

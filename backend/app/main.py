@@ -20,10 +20,26 @@ app = FastAPI(
     redoc_url=f"{settings.API_V1_PREFIX}/redoc"
 )
 
-# CORS Middleware
+from app.core.middleware import (
+    SecurityHeadersMiddleware,
+    RequestTracingMiddleware,
+    RateLimitMiddleware
+)
+
+# Security and Observability Middlewares
+# Rate Limiting Middleware (Closest to application endpoints)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=settings.RATE_LIMIT_PER_MINUTE)
+
+# Observability and Tracing Middleware
+app.add_middleware(RequestTracingMiddleware)
+
+# Security Headers Middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# CORS Middleware (Outermost layer: wraps all responses including rate limit 429 and preflight OPTIONS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -120,15 +120,23 @@ class AuditWorker:
     def save_audit_result(cls, audit: AuditResult) -> None:
         file_path = settings.STORAGE_DIR / f"{audit.doc_id}_audit.json"
         file_path.write_text(audit.model_dump_json(indent=2), encoding="utf-8")
+        from app.services.cache.memory_cache import audit_cache
+        audit_cache.set(f"audit_result:{audit.doc_id}", audit)
 
     @classmethod
     def get_audit_result(cls, doc_id: str) -> Optional[AuditResult]:
+        from app.services.cache.memory_cache import audit_cache
+        cached = audit_cache.get(f"audit_result:{doc_id}")
+        if cached is not None:
+            return cached
         file_path = settings.STORAGE_DIR / f"{doc_id}_audit.json"
         if not file_path.exists():
             return None
         try:
             content = file_path.read_text(encoding="utf-8")
-            return AuditResult.model_validate_json(content)
+            result = AuditResult.model_validate_json(content)
+            audit_cache.set(f"audit_result:{doc_id}", result)
+            return result
         except Exception as e:
             logger.error(f"Error loading audit result for {doc_id}: {e}")
             return None

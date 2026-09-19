@@ -93,6 +93,9 @@ CONTINGENT LIABILITIES & RISK DISCLOSURES
    A reserve of $1.8M has been accrued for uncertain tax positions under ASC 740.
 """
 
+from app.core.security import verify_magic_bytes, sanitize_filename, safe_join_path
+from app.services.cache.memory_cache import audit_cache, query_cache
+
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
     background_tasks: BackgroundTasks,
@@ -101,23 +104,20 @@ async def upload_document(
     provider: Optional[str] = Form(None),
     custom_prompt: Optional[str] = Form(None)
 ):
-    ext = Path(file.filename).suffix.lower()
+    original_filename = file.filename or "document.txt"
+    sanitized_name = sanitize_filename(original_filename)
+    ext = Path(sanitized_name).suffix.lower()
+    
     if ext not in [".pdf", ".docx", ".doc", ".txt", ".md"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported file format '{ext}'. Allowed: .pdf, .docx, .txt, .md"
         )
 
-    doc_id = str(uuid.uuid4())[:8]
-    clean_filename = f"{doc_id}_{Path(file.filename).name}"
-    save_path = settings.UPLOAD_DIR / clean_filename
-
-    with open(save_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-
-    file_size = save_path.stat().st_size
+    file_bytes = await file.read()
+    file_size = len(file_bytes)
+    
     if file_size == 0:
-        save_path.unlink(missing_ok=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Uploaded file is empty (0 bytes)."
@@ -125,15 +125,34 @@ async def upload_document(
 
     max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     if file_size > max_bytes:
-        save_path.unlink(missing_ok=True)
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"File size exceeds maximum allowed limit of {settings.MAX_UPLOAD_SIZE_MB}MB."
         )
 
+    # Enterprise magic bytes verification
+    if not verify_magic_bytes(file_bytes, ext):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file content or signature for format '{ext}'. File header verification failed."
+        )
+
+    doc_id = str(uuid.uuid4())[:8]
+    clean_filename = f"{doc_id}_{sanitized_name}"
+    
+    try:
+        save_path = safe_join_path(settings.UPLOAD_DIR, clean_filename)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Path validation failed: {str(e)}"
+        )
+        
+    save_path.write_bytes(file_bytes)
+
     meta = DocumentMetadata(
         id=doc_id,
-        filename=Path(file.filename).name,
+        filename=sanitized_name,
         file_type=ext,
         file_size=file_size,
         status=DocumentStatus.PENDING,
@@ -154,7 +173,7 @@ async def upload_document(
 
     return DocumentUploadResponse(
         doc_id=doc_id,
-        filename=Path(file.filename).name,
+        filename=sanitized_name,
         file_size=file_size,
         file_type=ext,
         status=DocumentStatus.PENDING,
@@ -227,6 +246,8 @@ async def delete_document(doc_id: str):
         raise HTTPException(status_code=404, detail="Document not found")
 
     vector_store.delete_doc(doc_id)
+    audit_cache.invalidate(f"audit_result:{doc_id}")
+    query_cache.clear()
     audit_file = settings.STORAGE_DIR / f"{doc_id}_audit.json"
     if audit_file.exists():
         audit_file.unlink()

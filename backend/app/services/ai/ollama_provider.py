@@ -45,29 +45,33 @@ class OllamaProvider(BaseLLMProvider):
             return json.loads(raw_content.strip())
 
     async def audit_legal(self, document_text: str, chunks: List[DocumentChunk]) -> LegalContractAudit:
-        prompt = f"Audit this legal contract and return the exact JSON schema:\n\n{document_text[:25000]}"
+        from app.core.security import build_secure_audit_prompt
+        prompt = build_secure_audit_prompt("Audit this legal contract and return the exact JSON schema:", document_text, max_chars=25000)
         result_json = await self._generate_json(prompt, LegalContractAudit.model_json_schema())
         return LegalContractAudit.model_validate(result_json)
 
     async def audit_financial(self, document_text: str, chunks: List[DocumentChunk]) -> FinancialReportAudit:
-        prompt = f"Audit this financial report and return the exact JSON schema:\n\n{document_text[:25000]}"
+        from app.core.security import build_secure_audit_prompt
+        prompt = build_secure_audit_prompt("Audit this financial report and return the exact JSON schema:", document_text, max_chars=25000)
         result_json = await self._generate_json(prompt, FinancialReportAudit.model_json_schema())
         return FinancialReportAudit.model_validate(result_json)
 
     async def audit_custom(self, document_text: str, chunks: List[DocumentChunk], custom_prompt: Optional[str] = None) -> CustomAudit:
+        from app.core.security import build_secure_audit_prompt
         rule_desc = custom_prompt or "Standard compliance audit"
-        prompt = f"Perform custom audit '{rule_desc}' on document:\n\n{document_text[:25000]}"
+        prompt = build_secure_audit_prompt(f"Perform custom audit '{rule_desc}' on document:", document_text, max_chars=25000)
         result_json = await self._generate_json(prompt, CustomAudit.model_json_schema())
         return CustomAudit.model_validate(result_json)
 
     async def chat(self, question: str, context_chunks: List[DocumentChunk]) -> str:
         url = f"{self._base_url}/api/chat"
-        context_text = "\n\n".join([f"[Page {c.page_number}]: {c.content}" for c in context_chunks])
+        from app.core.security import build_secure_rag_prompt
+        snippets = [f"[Page {c.page_number}]: {c.content}" for c in context_chunks]
+        prompt = build_secure_rag_prompt(question, snippets)
         payload = {
             "model": self._model,
             "messages": [
-                {"role": "system", "content": "You are DocAudit AI. Answer using only the provided context passages and cite page numbers."},
-                {"role": "user", "content": f"Context:\n{context_text}\n\nQuestion: {question}"}
+                {"role": "user", "content": prompt}
             ],
             "stream": False
         }

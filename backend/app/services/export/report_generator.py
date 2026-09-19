@@ -2,7 +2,7 @@ import json
 import io
 from pathlib import Path
 from typing import Dict, Any, Optional
-from xml.sax.saxutils import escape as xml_escape
+from app.core.security import escape_xml as xml_escape
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import (

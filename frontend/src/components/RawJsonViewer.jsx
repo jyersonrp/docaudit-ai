@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Copy, Check, Code } from 'lucide-react';
 
-export default function RawJsonViewer({ data }) {
+const RawJsonViewer = memo(function RawJsonViewer({ data }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -11,35 +11,37 @@ export default function RawJsonViewer({ data }) {
   };
 
   return (
-    <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
-      <div className="px-4 py-3 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between">
-        <div className="flex items-center space-x-2 text-xs font-semibold text-slate-300">
-          <Code className="w-4 h-4 text-sky-400" />
-          <span>Validated Pydantic v2 Schema Representation</span>
+    <div className="bg-zinc-950/90 border border-zinc-850 rounded-xl overflow-hidden backdrop-blur-md">
+      <div className="px-4 py-2.5 bg-zinc-900/70 border-b border-zinc-850 flex items-center justify-between">
+        <div className="flex items-center space-x-2 text-xs font-medium text-zinc-300">
+          <Code className="w-3.5 h-3.5 text-zinc-400" />
+          <span className="font-mono text-[11px] text-zinc-400">Validated Pydantic v2 JSON Schema</span>
         </div>
         <button
           onClick={handleCopy}
-          className="flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition"
+          className="flex items-center space-x-1.5 text-xs text-zinc-400 hover:text-zinc-100 bg-zinc-850 hover:bg-zinc-800 px-2.5 py-1 rounded-md transition font-mono text-[11px]"
         >
           {copied ? (
             <>
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-emerald-400 font-medium">Copied</span>
+              <Check className="w-3 h-3 text-emerald-400" />
+              <span className="text-emerald-400">Copied</span>
             </>
           ) : (
             <>
-              <Copy className="w-3.5 h-3.5" />
+              <Copy className="w-3 h-3" />
               <span>Copy JSON</span>
             </>
           )}
         </button>
       </div>
 
-      <div className="p-4 max-h-[600px] overflow-auto">
-        <pre className="text-xs text-sky-300 font-mono leading-relaxed whitespace-pre-wrap">
+      <div className="p-4 max-h-[600px] overflow-auto bg-zinc-950/60">
+        <pre className="text-xs text-zinc-300 font-mono leading-relaxed whitespace-pre-wrap">
           {JSON.stringify(data, null, 2)}
         </pre>
       </div>
     </div>
   );
-}
+});
+
+export default RawJsonViewer;

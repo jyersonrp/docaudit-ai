@@ -24,11 +24,15 @@ async def get_audit_result(doc_id: str):
     if not meta:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    if meta.status == DocumentStatus.FAILED:
+        raise HTTPException(status_code=400, detail=f"Audit failed: {meta.error or meta.status_message}")
+
+    if meta.status in (DocumentStatus.PENDING, DocumentStatus.EXTRACTING, DocumentStatus.INDEXING, DocumentStatus.AUDITING):
+        raise HTTPException(status_code=202, detail=f"Audit in progress. Status: {meta.status.value} ({meta.progress}%)")
+
     result = AuditWorker.get_audit_result(doc_id)
     if not result:
-        if meta.status == DocumentStatus.FAILED:
-            raise HTTPException(status_code=400, detail=f"Audit failed: {meta.error}")
-        raise HTTPException(status_code=202, detail=f"Audit in progress. Status: {meta.status.value} ({meta.progress}%)")
+        raise HTTPException(status_code=404, detail="Audit result not found")
     return result
 
 @router.post("/{doc_id}/rerun")
@@ -50,6 +54,17 @@ async def rerun_audit(
         raise HTTPException(status_code=404, detail="Original source file not found on disk")
 
     selected_type = audit_type or meta.audit_type or DocumentType.LEGAL
+
+    # Invalidate caches and purge stale audit file before re-triggering
+    from app.services.cache.memory_cache import audit_cache, query_cache
+    audit_cache.invalidate(f"audit_result:{doc_id}")
+    query_cache.clear()
+    stale_audit_file = settings.STORAGE_DIR / f"{doc_id}_audit.json"
+    if stale_audit_file.exists():
+        try:
+            stale_audit_file.unlink()
+        except Exception:
+            pass
 
     # Immediately reset metadata status
     meta.status = DocumentStatus.PENDING

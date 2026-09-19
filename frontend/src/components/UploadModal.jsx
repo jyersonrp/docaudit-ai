@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { X, UploadCloud, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useState, memo } from 'react';
+import { X, UploadCloud, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
-export default function UploadModal({ isOpen, onClose, onUpload, isUploading }) {
+const UploadModal = memo(function UploadModal({ isOpen, onClose, onUpload, isUploading }) {
   const [file, setFile] = useState(null);
   const [auditType, setAuditType] = useState('legal');
   const [customPrompt, setCustomPrompt] = useState('');
@@ -40,7 +40,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, isUploading }) 
     const validExts = ['.pdf', '.docx', '.doc', '.txt', '.md'];
     const hasValidExt = validExts.some(ext => selected.name.toLowerCase().endsWith(ext));
     if (!hasValidExt) {
-      setError("Please select a valid document: PDF, DOCX, TXT, or MD");
+      setError("Please select a supported document: PDF, DOCX, TXT, or MD");
       return;
     }
     setFile(selected);
@@ -49,7 +49,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, isUploading }) 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
-      setError("Please select a file to upload");
+      setError("Please select a document to upload");
       return;
     }
     try {
@@ -63,17 +63,17 @@ export default function UploadModal({ isOpen, onClose, onUpload, isUploading }) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 backdrop-blur-md p-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
           <div>
-            <h3 className="text-base font-semibold text-white">Upload Document for Audit</h3>
-            <p className="text-xs text-slate-400">PDF, Word DOCX, TXT supported</p>
+            <h3 className="text-sm font-semibold text-zinc-100">Upload Document</h3>
+            <p className="text-xs text-zinc-500 font-mono">PDF, DOCX, TXT, MD supported &bull; Magic bytes verified</p>
           </div>
           <button 
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition p-1.5 rounded-lg hover:bg-slate-800"
+            className="text-zinc-500 hover:text-zinc-200 transition p-1.5 rounded-lg hover:bg-zinc-800"
           >
             <X className="w-4 h-4" />
           </button>
@@ -87,18 +87,18 @@ export default function UploadModal({ isOpen, onClose, onUpload, isUploading }) 
             </div>
           )}
 
-          {/* Drag & drop dropzone */}
+          {/* Drag & Drop Zone */}
           <div
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer ${
+            className={`border border-dashed rounded-xl p-6 text-center transition cursor-pointer ${
               dragActive 
-                ? "border-sky-500 bg-sky-500/5" 
+                ? "border-sky-500 bg-sky-500/5 shadow-glow-sm" 
                 : file 
                   ? "border-emerald-500/50 bg-emerald-500/5"
-                  : "border-slate-700 hover:border-slate-600 bg-slate-950/40"
+                  : "border-zinc-800 hover:border-zinc-700 bg-zinc-950/40"
             }`}
             onClick={() => document.getElementById("file-input").click()}
           >
@@ -111,50 +111,50 @@ export default function UploadModal({ isOpen, onClose, onUpload, isUploading }) 
             />
             {file ? (
               <div className="flex items-center justify-center space-x-3 text-emerald-400">
-                <CheckCircle2 className="w-6 h-6 shrink-0" />
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-white truncate max-w-xs">{file.name}</p>
-                  <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
+                  <p className="text-xs font-medium text-zinc-100 truncate max-w-xs">{file.name}</p>
+                  <p className="text-[10px] text-zinc-500 font-mono">{(file.size / 1024).toFixed(1)} KB</p>
                 </div>
               </div>
             ) : (
               <div className="space-y-2">
-                <div className="w-12 h-12 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-sky-400">
-                  <UploadCloud className="w-6 h-6" />
+                <div className="w-10 h-10 mx-auto rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400">
+                  <UploadCloud className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-200">
+                  <p className="text-xs font-medium text-zinc-200">
                     Click to select or drag and drop document
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">Maximum file size: 50MB</p>
+                  <p className="text-[10px] text-zinc-500 font-mono mt-0.5">Maximum file size: 50MB</p>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Audit Type Selection */}
+          {/* Audit Framework Selection */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Audit Framework & Schema
+            <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
+              Select Audit Type
             </label>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'legal', label: 'Legal Contract', desc: 'Jurisdiction, indemnity, terms' },
-                { id: 'financial', label: 'Financial Report', desc: 'Revenue, margins, fiscal risks' },
-                { id: 'custom', label: 'Custom Rules', desc: 'Custom criteria prompt' },
+                { id: 'legal', label: 'Legal Contract', desc: 'Indemnity & covenants' },
+                { id: 'financial', label: 'Financial Report', desc: 'Margins & fiscal ratios' },
+                { id: 'custom', label: 'Custom Rules', desc: 'Custom rules prompt' },
               ].map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setAuditType(t.id)}
-                  className={`p-3 rounded-xl border text-left transition ${
+                  className={`p-3 rounded-lg border text-left transition ${
                     auditType === t.id
-                      ? "border-sky-500 bg-sky-500/10 text-white"
-                      : "border-slate-800 hover:border-slate-700 bg-slate-950/40 text-slate-400"
+                      ? "border-zinc-500 bg-zinc-800 text-zinc-100"
+                      : "border-zinc-850 hover:border-zinc-800 bg-zinc-950/40 text-zinc-400"
                   }`}
                 >
-                  <div className="text-xs font-semibold text-slate-200">{t.label}</div>
-                  <div className="text-[10px] text-slate-500 mt-1 leading-tight">{t.desc}</div>
+                  <div className="text-xs font-medium text-zinc-200">{t.label}</div>
+                  <div className="text-[10px] text-zinc-500 mt-0.5 leading-tight">{t.desc}</div>
                 </button>
               ))}
             </div>
@@ -163,37 +163,46 @@ export default function UploadModal({ isOpen, onClose, onUpload, isUploading }) 
           {/* Custom prompt if custom rules chosen */}
           {auditType === 'custom' && (
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Custom Verification Rules
+              <label className="block text-xs font-medium text-zinc-300 mb-1">
+                Custom Verification Criteria
               </label>
               <textarea
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
-                placeholder="Example: Verify compliance with GDPR Article 28 data processor clauses, sub-processor notification windows, and data breach liability caps..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-sky-500 resize-none h-20"
+                placeholder="Specify regulatory benchmarks, GDPR clauses, or security mandates..."
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700 resize-none h-20 font-mono"
               />
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+          {/* Footer Actions */}
+          <div className="flex items-center justify-end space-x-2.5 pt-3 border-t border-zinc-800">
             <button
               type="button"
               onClick={onClose}
-              className="text-xs text-slate-400 hover:text-white px-4 py-2 font-medium"
+              className="text-xs text-zinc-400 hover:text-zinc-200 px-3 py-1.5 font-medium transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!file || isUploading}
-              className="text-xs bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-lg shadow-sm shadow-sky-600/30 transition flex items-center space-x-2"
+              className="text-xs bg-zinc-100 hover:bg-white disabled:opacity-50 text-zinc-950 font-medium px-4 py-2 rounded-lg shadow-sm transition flex items-center space-x-2"
             >
-              {isUploading ? "Processing..." : "Start Audit Pipeline"}
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <span>Start Audit Pipeline</span>
+              )}
             </button>
           </div>
         </form>
       </div>
     </div>
   );
-}
+});
+
+export default UploadModal;
