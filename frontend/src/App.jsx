@@ -18,7 +18,8 @@ import {
   BarChart3, 
   Loader2, 
   AlertCircle,
-  RotateCw
+  RotateCw,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function App() {
@@ -141,10 +142,11 @@ export default function App() {
     }
   };
 
-  const handleRerun = async (docId) => {
+  const handleRerun = async (docId, overrideProvider = null) => {
     try {
       setAuditData(null);
-      await api.rerunAudit(docId, selectedProvider);
+      const prov = overrideProvider || selectedProvider;
+      await api.rerunAudit(docId, prov);
       const updated = await api.getDocument(docId);
       setDocuments(prev => prev.map(d => d.id === docId ? updated : d));
     } catch (e) {
@@ -175,6 +177,10 @@ export default function App() {
     return documents.find(d => d.id === selectedDocId);
   }, [documents, selectedDocId]);
 
+  const selectedProviderObj = useMemo(() => {
+    return providers.find(p => p.id === selectedProvider);
+  }, [providers, selectedProvider]);
+
   // Tab definitions
   const tabs = useMemo(() => [
     { id: 'overview', label: 'Overview', icon: ShieldCheck },
@@ -195,6 +201,25 @@ export default function App() {
         isLoadingSample={isLoadingSample}
         systemHealth={systemHealth}
       />
+
+      {/* Provider Status Warning Banner if current selection is unavailable */}
+      {selectedProviderObj && !selectedProviderObj.available && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2.5 text-xs text-amber-300 flex items-center justify-between">
+          <div className="flex items-center space-x-2.5 max-w-4xl">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong className="font-semibold text-amber-200">Engine Notice ({selectedProviderObj.name}):</strong>{" "}
+              {selectedProviderObj.status_message}
+            </span>
+          </div>
+          <button 
+            onClick={() => setSelectedProvider('mock')}
+            className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 px-3 py-1 rounded-md text-[11px] font-medium transition shrink-0 ml-4"
+          >
+            Switch to Offline Engine
+          </button>
+        </div>
+      )}
 
       {/* Main Workspace Layout */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -250,21 +275,62 @@ export default function App() {
 
               {/* Failed State Banner */}
               {currentDoc.status === 'FAILED' && (
-                <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-start space-x-3">
-                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-xs font-medium text-rose-300 uppercase tracking-wide">Audit Failed</h4>
-                      <p className="text-xs text-rose-200/80 mt-0.5">{currentDoc.error || currentDoc.status_message}</p>
+                <div className="p-5 rounded-xl border border-rose-500/25 bg-rose-500/5 flex flex-col space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-start space-x-3">
+                      <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-xs font-semibold text-rose-300 uppercase tracking-wider">Audit Failed</h4>
+                        <p className="text-xs text-rose-200/90 mt-1 leading-relaxed whitespace-pre-wrap">
+                          {currentDoc.error || currentDoc.status_message}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0 self-start sm:self-center">
+                      <button
+                        onClick={() => {
+                          setSelectedProvider('mock');
+                          handleRerun(currentDoc.id, 'mock');
+                        }}
+                        className="bg-zinc-900 hover:bg-zinc-850 text-zinc-200 border border-zinc-700 hover:border-zinc-600 text-xs font-medium px-3.5 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-sm"
+                        title="Audit with built-in heuristic engine without local server dependencies"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Run Heuristic Engine (Offline)</span>
+                      </button>
+                      <button
+                        onClick={() => handleRerun(currentDoc.id)}
+                        className="bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 shadow-sm"
+                        title="Retry audit with current provider"
+                      >
+                        <RotateCw className="w-3.5 h-3.5" />
+                        <span>Retry</span>
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleRerun(currentDoc.id)}
-                    className="bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 self-start sm:self-center shrink-0 shadow-sm"
-                  >
-                    <RotateCw className="w-3.5 h-3.5" />
-                    <span>Retry Pipeline</span>
-                  </button>
+
+                  {/* Diagnostic troubleshooting box if error is Ollama related */}
+                  {(currentDoc.error?.toLowerCase().includes('ollama') || currentDoc.status_message?.toLowerCase().includes('ollama')) && (
+                    <div className="p-3.5 bg-zinc-900/90 border border-zinc-800 rounded-lg text-xs space-y-2 text-zinc-300 font-mono">
+                      <div className="font-semibold text-amber-400 text-[11px] uppercase tracking-wider flex items-center space-x-1.5 font-sans">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Ollama Local Diagnostics & Quick Fix:</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+                        <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
+                          <span className="text-zinc-500 block text-[10px]">1. Start Ollama Server</span>
+                          <code className="text-sky-300 select-all font-semibold">ollama serve</code>
+                        </div>
+                        <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
+                          <span className="text-zinc-500 block text-[10px]">2. Download Llama 3 Model</span>
+                          <code className="text-emerald-300 select-all font-semibold">ollama run llama3</code>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 pt-1 font-sans">
+                        Tip: Click <strong>"Run Heuristic Engine (Offline)"</strong> to immediately audit this document without waiting for Ollama.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -374,6 +440,8 @@ export default function App() {
         onClose={() => setIsUploadOpen(false)}
         onUpload={handleUpload}
         isUploading={isUploading}
+        selectedProviderObj={selectedProviderObj}
+        onSwitchToMock={() => setSelectedProvider('mock')}
       />
     </div>
   );

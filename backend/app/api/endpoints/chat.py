@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from fastapi import APIRouter, HTTPException
 from app.models.chat import ChatQueryRequest, ChatResponse, Citation
@@ -5,8 +6,9 @@ from app.models.document import DocumentStatus
 from app.workers.audit_worker import AuditWorker
 from app.services.vector.store import vector_store
 from app.services.ai.factory import LLMFactory
-
 from app.core.security import sanitize_prompt_delimiters
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -60,10 +62,11 @@ async def query_document(request: ChatQueryRequest):
     try:
         answer = await provider.chat(sanitized_q, context_chunks)
     except Exception as e:
-        # Fallback to local heuristic answer
+        logger.warning(f"Provider '{provider.provider_name}' failed during chat query: {e}. Falling back to mock provider.")
         mock_p = LLMFactory.get_provider("mock")
-        answer = await mock_p.chat(sanitized_q, context_chunks)
+        mock_answer = await mock_p.chat(sanitized_q, context_chunks)
         provider_used_name = f"{provider.provider_name} (fallback: mock)"
+        answer = f"[⚠️ Note: {provider.provider_name.upper()} unavailable ({str(e)}). Response generated via Local Deterministic Engine]\n\n{mock_answer}"
 
     return ChatResponse(
         doc_id=request.doc_id,

@@ -11,9 +11,9 @@ router = APIRouter()
 @router.get("/providers", response_model=List[Dict[str, Any]])
 async def list_providers():
     """
-    Returns available AI providers and default status.
+    Returns available AI providers, dynamic connectivity status, and default recommendations.
     """
-    return LLMFactory.list_providers()
+    return await LLMFactory.list_providers_async()
 
 @router.get("/{doc_id}/result", response_model=AuditResult)
 async def get_audit_result(doc_id: str):

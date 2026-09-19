@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { ShieldCheck, Cpu, Sparkles, Plus, BarChart3, ChevronDown } from 'lucide-react';
+import { ShieldCheck, Cpu, Sparkles, Plus, BarChart3, ChevronDown, AlertTriangle } from 'lucide-react';
 
 const Navbar = memo(function Navbar({ 
   providers, 
@@ -10,6 +10,9 @@ const Navbar = memo(function Navbar({
   isLoadingSample,
   systemHealth
 }) {
+  const currentProviderObj = providers.find(p => p.id === (selectedProvider || 'mock'));
+  const isCurrentUnavailable = currentProviderObj && !currentProviderObj.available;
+
   return (
     <header className="border-b border-zinc-850 bg-zinc-950/80 backdrop-blur-xl sticky top-0 z-40 px-6 py-3">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -28,20 +31,40 @@ const Navbar = memo(function Navbar({
 
         {/* Center: AI Provider Selector & Health Indicator */}
         <div className="hidden md:flex items-center space-x-3">
-          <div className="flex items-center space-x-2 bg-zinc-900/90 border border-zinc-800/80 rounded-lg px-2.5 py-1">
-            <Cpu className="w-3.5 h-3.5 text-zinc-400" />
+          <div className={`flex items-center space-x-2 bg-zinc-900/90 border rounded-lg px-2.5 py-1 transition ${
+            isCurrentUnavailable ? 'border-amber-500/50 bg-amber-950/10' : 'border-zinc-800/80'
+          }`}>
+            {isCurrentUnavailable ? (
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" title={currentProviderObj.status_message} />
+            ) : (
+              <Cpu className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            )}
             <span className="text-xs text-zinc-400 font-medium">Engine:</span>
             <div className="relative flex items-center">
               <select 
                 value={selectedProvider || 'mock'} 
                 onChange={(e) => onSelectProvider(e.target.value)}
-                className="bg-transparent text-zinc-200 text-xs font-medium appearance-none pr-5 pl-1 focus:outline-none cursor-pointer"
+                className={`bg-transparent text-xs font-medium appearance-none pr-5 pl-1 focus:outline-none cursor-pointer ${
+                  isCurrentUnavailable ? 'text-amber-300' : 'text-zinc-200'
+                }`}
               >
-                {providers.map(p => (
-                  <option key={p.id} value={p.id} className="bg-zinc-900 text-zinc-200">
-                    {p.name} {p.available ? '' : '(Key needed)'}
-                  </option>
-                ))}
+                {providers.map(p => {
+                  let suffix = '';
+                  if (!p.available) {
+                    if (p.id === 'ollama') {
+                      if (p.online === false) suffix = ' (Offline)';
+                      else if (p.model_installed === false) suffix = ' (llama3 missing)';
+                      else suffix = ' (Unavailable)';
+                    } else {
+                      suffix = ' (Key needed)';
+                    }
+                  }
+                  return (
+                    <option key={p.id} value={p.id} className="bg-zinc-900 text-zinc-200">
+                      {p.name}{suffix}
+                    </option>
+                  );
+                })}
               </select>
               <ChevronDown className="w-3 h-3 text-zinc-500 absolute right-0 pointer-events-none" />
             </div>

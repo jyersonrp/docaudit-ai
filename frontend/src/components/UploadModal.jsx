@@ -1,7 +1,14 @@
 import React, { useState, memo } from 'react';
-import { X, UploadCloud, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, UploadCloud, FileText, AlertCircle, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
 
-const UploadModal = memo(function UploadModal({ isOpen, onClose, onUpload, isUploading }) {
+const UploadModal = memo(function UploadModal({ 
+  isOpen, 
+  onClose, 
+  onUpload, 
+  isUploading,
+  selectedProviderObj = null,
+  onSwitchToMock = null
+}) {
   const [file, setFile] = useState(null);
   const [auditType, setAuditType] = useState('legal');
   const [customPrompt, setCustomPrompt] = useState('');
@@ -84,6 +91,26 @@ const UploadModal = memo(function UploadModal({ isOpen, onClose, onUpload, isUpl
             <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs px-3.5 py-2.5 rounded-lg flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {selectedProviderObj && !selectedProviderObj.available && (
+            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs px-3.5 py-2.5 rounded-lg flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  <strong>Notice:</strong> Current engine <em>{selectedProviderObj.name}</em> is unavailable ({selectedProviderObj.status_message}).
+                </span>
+              </div>
+              {onSwitchToMock && (
+                <button
+                  type="button"
+                  onClick={onSwitchToMock}
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 px-2.5 py-1 rounded text-[11px] font-medium transition shrink-0 ml-3 whitespace-nowrap"
+                >
+                  Switch to Offline Engine
+                </button>
+              )}
             </div>
           )}
 
