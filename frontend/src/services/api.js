@@ -1,7 +1,12 @@
+const isDeployedOnVercel = typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app');
 const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-export const API_BASE_URL = RAW_API_BASE_URL && RAW_API_BASE_URL.trim() !== ''
-  ? RAW_API_BASE_URL.trim().replace(/\/+$/, '')
-  : 'http://localhost:8000';
+
+// On Vercel, prefer same-origin reverse proxy ("") to bypass browser adblockers, Brave Shields, and CORS
+export const API_BASE_URL = isDeployedOnVercel
+  ? ''
+  : (RAW_API_BASE_URL && RAW_API_BASE_URL.trim() !== ''
+      ? RAW_API_BASE_URL.trim().replace(/\/+$/, '')
+      : 'http://localhost:8000');
 
 export const API_BASE = `${API_BASE_URL}/api/v1`;
 

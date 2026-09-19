@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/health",
+      "destination": "https://docaudit-backend.onrender.com/health"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://docaudit-backend.onrender.com/api/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
