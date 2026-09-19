@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class GeminiProvider(BaseLLMProvider):
     def __init__(self, api_key: Optional[str] = None):
         self._api_key = api_key or settings.GEMINI_API_KEY
-        self._model = getattr(settings, "GEMINI_MODEL", "gemini-3.6-flash")
+        self._model = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
         self._client = None
         if self._api_key:
             try:
@@ -28,6 +28,40 @@ class GeminiProvider(BaseLLMProvider):
     def model_name(self) -> str:
         return self._model
 
+    async def _generate_with_retry(self, contents, config=None, max_retries: int = 3):
+        import asyncio
+        models_to_try = [
+            self._model,
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash"
+        ]
+        candidate_models = list(dict.fromkeys(models_to_try))
+        last_error = None
+
+        for model_name in candidate_models:
+            for attempt in range(max_retries):
+                try:
+                    kwargs = {"model": model_name, "contents": contents}
+                    if config:
+                        kwargs["config"] = config
+                    return await self._client.aio.models.generate_content(**kwargs)
+                except Exception as e:
+                    last_error = e
+                    err_str = str(e).lower()
+                    if "404" in err_str or "not_found" in err_str or "no longer available" in err_str:
+                        logger.warning(f"Gemini model {model_name} unavailable (404), switching to fallback: {e}")
+                        break
+                    elif "503" in err_str or "unavailable" in err_str or "high demand" in err_str or "429" in err_str:
+                        wait_sec = 1.5 * (attempt + 1)
+                        logger.warning(f"Gemini {model_name} busy ({err_str[:60]}), retrying in {wait_sec}s...")
+                        await asyncio.sleep(wait_sec)
+                    else:
+                        break
+
+        raise RuntimeError(f"Gemini API error: {str(last_error)}") from last_error
+
     async def audit_legal(self, document_text: str, chunks: List[DocumentChunk]) -> LegalContractAudit:
         if not self._client:
             raise RuntimeError("Gemini Client is not initialized. Please configure GEMINI_API_KEY.")
@@ -43,14 +77,11 @@ class GeminiProvider(BaseLLMProvider):
         prompt = build_secure_audit_prompt(system_instruction, document_text, max_chars=35000)
 
         try:
-            response = await self._client.aio.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_json_schema=LegalContractAudit.model_json_schema()
-                )
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=LegalContractAudit.model_json_schema()
             )
+            response = await self._generate_with_retry(contents=prompt, config=config)
             return LegalContractAudit.model_validate_json(response.text)
         except Exception as e:
             logger.error(f"Gemini legal audit failed: {e}")
@@ -72,14 +103,11 @@ class GeminiProvider(BaseLLMProvider):
         prompt = build_secure_audit_prompt(system_instruction, document_text, max_chars=35000)
 
         try:
-            response = await self._client.aio.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_json_schema=FinancialReportAudit.model_json_schema()
-                )
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=FinancialReportAudit.model_json_schema()
             )
+            response = await self._generate_with_retry(contents=prompt, config=config)
             return FinancialReportAudit.model_validate_json(response.text)
         except Exception as e:
             logger.error(f"Gemini financial audit failed: {e}")
@@ -97,14 +125,11 @@ class GeminiProvider(BaseLLMProvider):
         prompt = build_secure_audit_prompt(system_instruction, document_text, max_chars=35000)
 
         try:
-            response = await self._client.aio.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_json_schema=CustomAudit.model_json_schema()
-                )
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_json_schema=CustomAudit.model_json_schema()
             )
+            response = await self._generate_with_retry(contents=prompt, config=config)
             return CustomAudit.model_validate_json(response.text)
         except Exception as e:
             logger.error(f"Gemini custom audit failed: {e}")
@@ -122,10 +147,7 @@ class GeminiProvider(BaseLLMProvider):
         prompt = build_secure_rag_prompt(question, snippets)
 
         try:
-            response = await self._client.aio.models.generate_content(
-                model=self._model,
-                contents=prompt
-            )
+            response = await self._generate_with_retry(contents=prompt)
             return response.text or "No response generated."
         except Exception as e:
             logger.error(f"Gemini chat failed: {e}")
