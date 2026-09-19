@@ -1,6 +1,6 @@
 # 🛡️ DocAudit AI: Asynchronous Document Audit & Extraction Engine
 
-[![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com)
+[![CI Pipeline](https://github.com/jyersonrp/docaudit-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/jyersonrp/docaudit-ai/actions/workflows/ci.yml)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2.13-E92063?style=for-the-badge&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
@@ -219,7 +219,7 @@ Deploy a live, production-grade cloud instance with **0 hosting costs** to share
 Paste these links directly into your resume bullet points and LinkedIn Featured Projects section:
 - **Live Interactive Demo**: `https://your-project.vercel.app`
 - **Interactive OpenAPI / Swagger Documentation**: `https://your-backend.onrender.com/api/v1/docs`
-- **GitHub Repository**: `https://github.com/your-username/docaudit-ai`
+- **GitHub Repository**: [https://github.com/jyersonrp/docaudit-ai](https://github.com/jyersonrp/docaudit-ai)
 
 ---
 
