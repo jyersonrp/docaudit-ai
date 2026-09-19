@@ -4,15 +4,15 @@
 ### *Autonomous Enterprise Document Risk Extraction & Intelligent Audit Engine*
 
 [![CI Pipeline](https://github.com/jyersonrp/docaudit-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/jyersonrp/docaudit-ai/actions/workflows/ci.yml)
-[![Pytest 66 Passed](https://img.shields.io/badge/Pytest-66%20Passed-10b981?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org/)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-docaudit--ai.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://docaudit-ai.vercel.app/)
-[![API Docs](https://img.shields.io/badge/API%20Docs-Swagger%20UI-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://docaudit-backend.onrender.com/api/v1/docs)
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Pydantic v2](https://img.shields.io/badge/Pydantic-v2.13-E92063?style=for-the-badge&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
-[![React 18](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![License MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![Pydantic](https://img.shields.io/badge/Pydantic-v2.13-E92063?style=for-the-badge&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Tailwind](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Tests](https://img.shields.io/badge/Tests-Passed-10b981?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org/)
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://docaudit-ai.vercel.app/)
+[![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://docaudit-backend.onrender.com/api/v1/docs)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
 <br/>
 

@@ -23,3 +23,4 @@ DocAudit AI enforces strict application security standards aligned with OWASP To
 ## Reporting a Vulnerability
 
 If you discover a potential security vulnerability within DocAudit AI, please report it responsibly by opening a private security advisory or contacting the maintainer directly via GitHub [@jyersonrp](https://github.com/jyersonrp).
+
