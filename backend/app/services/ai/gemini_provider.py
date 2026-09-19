@@ -34,10 +34,8 @@ class GeminiProvider(BaseLLMProvider):
             self._model,
             "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash"
         ]
-        candidate_models = list(dict.fromkeys(models_to_try))
+        candidate_models = [m for m in dict.fromkeys(models_to_try) if m]
         last_error = None
 
         for model_name in candidate_models:
@@ -46,7 +44,9 @@ class GeminiProvider(BaseLLMProvider):
                     kwargs = {"model": model_name, "contents": contents}
                     if config:
                         kwargs["config"] = config
-                    return await self._client.aio.models.generate_content(**kwargs)
+                    res = await self._client.aio.models.generate_content(**kwargs)
+                    self._model = model_name
+                    return res
                 except Exception as e:
                     last_error = e
                     err_str = str(e).lower()
@@ -60,7 +60,19 @@ class GeminiProvider(BaseLLMProvider):
                     else:
                         break
 
-        raise RuntimeError(f"Gemini API error: {str(last_error)}") from last_error
+        err_msg = str(last_error)
+        if "503" in err_msg.lower() or "high demand" in err_msg.lower():
+            raise RuntimeError(
+                "Google Gemini free tier is currently experiencing peak traffic (503 High Demand). "
+                "Please retry in a moment, or click 'Run Heuristic Engine (Offline)' for an instant audit."
+            ) from last_error
+        elif "429" in err_msg.lower():
+            raise RuntimeError(
+                "Google Gemini rate limit reached (429). "
+                "Please wait 30 seconds and retry, or use the Heuristic Engine."
+            ) from last_error
+
+        raise RuntimeError(f"Gemini API error: {err_msg}") from last_error
 
     async def audit_legal(self, document_text: str, chunks: List[DocumentChunk]) -> LegalContractAudit:
         if not self._client:
