@@ -11,7 +11,7 @@
 [![Tailwind](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://docaudit-ai.vercel.app/)
 [![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://docaudit-backend.onrender.com/api/v1/docs)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey?style=for-the-badge&logo=creative-commons)](LICENSE)
 
 <br/>
 
@@ -319,7 +319,7 @@ docaudit-ai/
 │   └── vite.config.js
 ├── docker-compose.yml           # Full-stack composition (API, Frontend, pgvector, Redis)
 ├── render.yaml                  # Render Blueprint definition for 1-click cloud deployment
-├── LICENSE                      # MIT Open Source License
+├── LICENSE                      # CC BY-NC-ND 4.0 License
 ├── SECURITY.md                  # Vulnerability disclosure and OWASP controls policy
 └── README.md
 ```
@@ -340,4 +340,10 @@ Developed with precision by **Jyerson** ([@jyersonrp](https://github.com/jyerson
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)** license.
+
+- **Non-Commercial**: You may not use the material for commercial purposes, SaaS offerings, or monetized enterprise audit services.
+- **No Derivatives**: If you remix, transform, or build upon the material, you may not distribute the modified material.
+- **Attribution**: You must give appropriate credit to the author (**Jyerson Rodríguez — [@jyersonrp](https://github.com/jyersonrp)**).
+
+See the [LICENSE](LICENSE) file for the full legal text.
