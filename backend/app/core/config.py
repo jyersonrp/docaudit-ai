@@ -39,9 +39,12 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
         "http://localhost:3000",
         "http://localhost:8000"
     ]
+    CORS_ORIGIN_REGEX: Optional[str] = r"^https:\/\/.*(\.vercel\.app|\.onrender\.com)$"
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
@@ -49,9 +52,14 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             if v.startswith("[") and v.endswith("]"):
                 import json
-                return json.loads(v)
-            return [i.strip() for i in v.split(",") if i.strip()]
-        return v
+                raw_list = json.loads(v)
+            else:
+                raw_list = [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, (list, tuple)):
+            raw_list = list(v)
+        else:
+            return v
+        return [str(item).strip().rstrip("/") for item in raw_list if str(item).strip()]
     
     # Vector store type: "local" or "pgvector"
     VECTOR_STORE_TYPE: str = os.getenv("VECTOR_STORE_TYPE", "local")

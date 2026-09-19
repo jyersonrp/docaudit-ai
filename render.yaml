@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: docaudit-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: ENVIRONMENT
+        value: production
+      - key: DEFAULT_LLM_PROVIDER
+        value: auto
+      - key: CORS_ORIGIN_REGEX
+        value: ^https:\/\/.*(\.vercel\.app|\.onrender\.com)$
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

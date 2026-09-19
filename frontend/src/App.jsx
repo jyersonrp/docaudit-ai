@@ -34,6 +34,7 @@ export default function App() {
   const [providers, setProviders] = useState([]);
   const [selectedProvider, setSelectedProvider] = useState('mock');
   const [systemHealth, setSystemHealth] = useState(null);
+  const [healthStatus, setHealthStatus] = useState('checking');
 
   // Initial data loading
   useEffect(() => {
@@ -54,11 +55,18 @@ export default function App() {
   };
 
   const loadHealth = async () => {
+    setHealthStatus('checking');
     try {
       const health = await api.fetchHealth();
       setSystemHealth(health);
+      setHealthStatus('healthy');
+      // Auto-populate documents and providers if they failed during cold-start
+      loadProviders();
+      loadDocuments(true);
     } catch (e) {
       console.error("Failed to load health:", e);
+      setSystemHealth(null);
+      setHealthStatus('offline');
     }
   };
 
@@ -200,6 +208,8 @@ export default function App() {
         onLoadSample={handleLoadSample}
         isLoadingSample={isLoadingSample}
         systemHealth={systemHealth}
+        healthStatus={healthStatus}
+        onRetryHealth={loadHealth}
       />
 
       {/* Provider Status Warning Banner if current selection is unavailable */}

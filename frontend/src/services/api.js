@@ -1,8 +1,14 @@
-const API_BASE = '/api/v1';
+const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = RAW_API_BASE_URL && RAW_API_BASE_URL.trim() !== ''
+  ? RAW_API_BASE_URL.trim().replace(/\/+$/, '')
+  : 'http://localhost:8000';
+
+export const API_BASE = `${API_BASE_URL}/api/v1`;
 
 export const api = {
   async fetchHealth() {
-    const res = await fetch('/health');
+    const res = await fetch(`${API_BASE_URL}/health`);
+    if (!res.ok) throw new Error(`Health check failed with status ${res.status}`);
     return res.json();
   },
 

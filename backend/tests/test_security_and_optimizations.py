@@ -2,7 +2,6 @@ import io
 import time
 import zipfile
 import pytest
-from pathlib import Path
 from starlette.testclient import TestClient
 from app.main import app
 from app.core.security import (
@@ -249,7 +248,7 @@ def test_options_preflight_exempt_from_rate_limiting():
         assert r_opt.status_code == 200
 
 def test_secure_audit_prompt_building_and_case_insensitivity():
-    from app.core.security import build_secure_audit_prompt, sanitize_prompt_delimiters
+    from app.core.security import build_secure_audit_prompt
     
     # Test case-insensitive delimiter neutralization
     malicious_text = (
@@ -304,6 +303,14 @@ def test_cors_origins_configuration_validator():
     # JSON list string
     s2 = Settings(CORS_ORIGINS='["http://baz.com"]')
     assert s2.CORS_ORIGINS == ["http://baz.com"]
+
+    # Trailing slash normalization in comma-separated string
+    s3 = Settings(CORS_ORIGINS="http://foo.com/, http://bar.com/")
+    assert s3.CORS_ORIGINS == ["http://foo.com", "http://bar.com"]
+
+    # Trailing slash normalization in list
+    s4 = Settings(CORS_ORIGINS=["http://baz.com/", "http://qux.com"])
+    assert s4.CORS_ORIGINS == ["http://baz.com", "http://qux.com"]
 
 def test_rerun_audit_invalidates_cache():
     from app.workers.audit_worker import AuditWorker

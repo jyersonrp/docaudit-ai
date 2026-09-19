@@ -167,3 +167,60 @@ def test_chat_with_unrelated_query_no_hallucinated_citations():
 
     # Clean up
     client.delete(f"/api/v1/documents/{doc_id}")
+
+def test_cors_preflight_localhost():
+    # Standard dev server port 5173
+    res = client.options(
+        "/health",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "GET"
+        }
+    )
+    assert res.status_code == 200
+    assert res.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+    # Vite preview server port 4173
+    res_preview = client.options(
+        "/health",
+        headers={
+            "Origin": "http://localhost:4173",
+            "Access-Control-Request-Method": "GET"
+        }
+    )
+    assert res_preview.status_code == 200
+    assert res_preview.headers.get("access-control-allow-origin") == "http://localhost:4173"
+
+def test_cors_vercel_origin_regex():
+    # Production Vercel domain
+    res = client.get(
+        "/health",
+        headers={"Origin": "https://docaudit-ai.vercel.app"}
+    )
+    assert res.status_code == 200
+    assert res.headers.get("access-control-allow-origin") == "https://docaudit-ai.vercel.app"
+    assert res.headers.get("access-control-expose-headers") == "*"
+
+    # Preview Vercel domain
+    res_preview = client.get(
+        "/health",
+        headers={"Origin": "https://docaudit-git-feature-branch.vercel.app"}
+    )
+    assert res_preview.status_code == 200
+    assert res_preview.headers.get("access-control-allow-origin") == "https://docaudit-git-feature-branch.vercel.app"
+
+    # Render domain
+    res_render = client.get(
+        "/health",
+        headers={"Origin": "https://docaudit-frontend.onrender.com"}
+    )
+    assert res_render.status_code == 200
+    assert res_render.headers.get("access-control-allow-origin") == "https://docaudit-frontend.onrender.com"
+
+def test_cors_unauthorized_origin_rejected():
+    res = client.get(
+        "/health",
+        headers={"Origin": "https://unauthorized-attacker-site.com"}
+    )
+    assert res.status_code == 200
+    assert "access-control-allow-origin" not in res.headers

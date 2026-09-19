@@ -1,12 +1,15 @@
 # 🛡️ DocAudit AI: Asynchronous Document Audit & Extraction Engine
 
+[![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2.13-E92063?style=for-the-badge&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/Pytest-25%20Passed-4EBA6F?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org/)
+[![Tests](https://img.shields.io/badge/Pytest-66%20Passed-4EBA6F?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org/)
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
+[![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com)
+
 
 **DocAudit AI** is a production-grade, asynchronous document intelligence system designed to audit, extract, and quantify operational risk in complex unstructured documents (master services agreements, enterprise software licenses, and 10-K/quarterly financial filings).
 
@@ -139,6 +142,88 @@ docker-compose up --build
 
 ---
 
+### Option C: 🌐 Deploy to Vercel & Render in 5 Minutes (100% Free)
+
+Deploy a live, production-grade cloud instance with **0 hosting costs** to share on your **CV, Portfolio, and LinkedIn**.
+
+- **Backend API**: Hosted on **Render.com** (Free Web Service tier, native Python 3.12, automated health checks)
+- **Frontend Dashboard**: Hosted on **Vercel** (Free Hobby tier, fast global edge CDN, automatic SPA rewrites)
+- **Zero Cost & Zero Key Barrier**: Operates 100% free with the built-in deterministic heuristic fallback engine, or optionally connect your Google Gemini / OpenAI API keys for live LLM inference.
+
+```
+                           +-------------------------------------+
+                           |            USER BROWSER             |
+                           +-------------------+-----------------+
+                                               |
+                          HTTPS / SPA Routes   |   REST / RAG API
+                                               v
+                        +----------------------+----------------------+
+                        |                                             |
+                        v                                             v
+         +-----------------------------+               +-----------------------------+
+         |     VERCEL (EDGE CDN)       |               |    RENDER.COM (WEB SERVICE) |
+         |   React 18 Dashboard SPA    | ------------> |    FastAPI Python 3.12      |
+         |   Rewrite rules enabled     |  CORS Origin  |    Healthcheck: /health     |
+         |  https://<app>.vercel.app   |    Allowed    |  https://<api>.onrender.com |
+         +-----------------------------+               +-----------------------------+
+```
+
+#### Step 1: Deploy Backend to Render (Free Web Service)
+
+1. Push your repository to your GitHub account:
+   ```bash
+   git add .
+   git commit -m "feat: ci/cd pipeline and cloud deployment readiness"
+   git push origin master
+   ```
+2. Sign in to [Render.com](https://render.com) (free account, no credit card required).
+3. From the dashboard, click **New +** > **Blueprint**.
+4. Connect your GitHub repository.
+5. Render will automatically detect [`render.yaml`](file:///render.yaml) and pre-configure the service:
+   - **Name**: `docaudit-backend`
+   - **Environment**: Python 3.12
+   - **Root Directory**: `backend`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Health Check Path**: `/health`
+   - **Plan**: `free`
+6. *(Optional)* To enable live Google Gemini or OpenAI LLMs, add your `GEMINI_API_KEY` or `OPENAI_API_KEY` in the Environment Variables table. If left blank, DocAudit AI uses its deterministic heuristic fallback engine out-of-the-box.
+7. Click **Apply**. Render will build and deploy the web service in ~2 minutes.
+8. Copy your live backend URL (e.g., `https://docaudit-backend.onrender.com`).
+   - Confirm it is online by visiting `https://docaudit-backend.onrender.com/health` in your browser.
+
+#### Step 2: Deploy Frontend to Vercel (Free Edge CDN)
+
+1. Sign in to [Vercel.com](https://vercel.com) (free account).
+2. Click **Add New...** > **Project**.
+3. Import your GitHub repository.
+4. Configure your project settings:
+   - **Framework Preset**: Vite
+   - **Root Directory**: Click *Edit* and select `frontend`
+5. Expand **Environment Variables** and add:
+   - **Key**: `VITE_API_BASE_URL`
+   - **Value**: `https://docaudit-backend.onrender.com` *(paste your live Render backend URL from Step 1 without trailing slash)*
+6. Click **Deploy**.
+7. In ~45 seconds, your frontend will be live at `https://your-project.vercel.app`!
+
+#### Step 3: Test & Verify Live Deployment
+
+1. Open your live Vercel URL in your browser.
+2. Verify the status indicator shows **System Online** with health status 200.
+3. Click **Load Sample Legal Contract** or **Load Financial Statement** for instant zero-key auditing.
+4. Ask questions in the interactive RAG Chat with page-level citations.
+5. Download publication-grade executive **PDF**, **Markdown**, and **JSON** reports directly from the live web UI.
+
+#### 💼 Showcase on Your CV & LinkedIn
+
+Paste these links directly into your resume bullet points and LinkedIn Featured Projects section:
+- **Live Interactive Demo**: `https://your-project.vercel.app`
+- **Interactive OpenAPI / Swagger Documentation**: `https://your-backend.onrender.com/api/v1/docs`
+- **GitHub Repository**: `https://github.com/your-username/docaudit-ai`
+
+---
+
+
 ## 📡 API Reference
 
 | Method | Endpoint | Description |
@@ -181,9 +266,25 @@ curl -O -J "http://localhost:8000/api/v1/export/<DOC_ID>/pdf"
 
 ---
 
+## ⚙️ Automated CI/CD Pipeline
+
+Every `push` and `pull_request` targeting `main` or `master` triggers our GitHub Actions CI pipeline ([`.github/workflows/ci.yml`](file:///.github/workflows/ci.yml)):
+
+- **Backend Quality & Tests (`backend-checks`)**:
+  - Sets up Python 3.12 with pip cache acceleration.
+  - Installs production dependencies and test harness.
+  - Runs Flake8 static analysis enforcing zero critical syntax (`E9`) and undefined variable (`F63`, `F7`, `F82`) defects.
+  - Executes the full 66-test Pytest suite with isolated mock fallback fixtures.
+- **Frontend Build & Quality (`frontend-checks`)**:
+  - Sets up Node.js 20.x with npm dependency caching.
+  - Performs clean installation via `npm ci`.
+  - Executes `npm run build` validating production Vite asset bundling and zero JSX/syntax errors.
+
+---
+
 ## 🧪 Automated Test Suite
 
-The test suite covers unit extraction (PDF, Word DOCX, corrupted formats), semantic chunking with clause boundary detection, local vector store SQLite operations, multi-provider factory fallbacks, and full end-to-end FastAPI endpoint workflows.
+The test suite covers unit extraction (PDF, Word DOCX, corrupted formats), semantic chunking with clause boundary detection, local vector store SQLite operations, multi-provider factory fallbacks, Ollama integration, security hardening (magic bytes, path traversal, XML injection), CORS preflight & Vercel domain regex matching, and full end-to-end FastAPI endpoint workflows.
 
 ```bash
 # Run pytest with verbose reporting
@@ -192,13 +293,15 @@ pytest -v
 
 ### Test Summary
 - `test_ai_providers.py`: MockProvider heuristic extraction, schema compliance, LLMFactory auto-resolution.
-- `test_api_endpoints.py`: End-to-end pipeline execution, sample seeding, RAG query with citations, and multi-format exports.
+- `test_api_endpoints.py`: End-to-end pipeline execution, sample seeding, RAG query with citations, multi-format exports, and CORS preflight / production origin verification.
 - `test_chunker.py`: Semantic paragraph and section heading detection with token windows.
 - `test_extractor.py`: PDF rendering & parsing, DOCX tables & paragraph extraction, format validation.
+- `test_ollama_provider.py`: Ollama HTTP client integration, custom schemas, retry logic, timeout resilience, and streaming.
 - `test_report_generator.py`: PDF binary generation, Markdown templating, JSON schema compliance.
+- `test_security_and_optimizations.py`: Magic bytes validation, path traversal prevention, prompt injection mitigation, XML escaping, rate limiting, and in-memory LRU caching.
 - `test_vector_store.py`: SQLite index creation, TF-IDF hybrid search, document-level isolation, and cascading deletion.
 
-**Result: 16 passed, 0 failures, 100% green.**
+**Result: 66 passed, 0 failures, 100% green.**
 
 ---
 

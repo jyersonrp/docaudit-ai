@@ -8,7 +8,9 @@ const Navbar = memo(function Navbar({
   onOpenUpload, 
   onLoadSample, 
   isLoadingSample,
-  systemHealth
+  systemHealth,
+  healthStatus,
+  onRetryHealth
 }) {
   const currentProviderObj = providers.find(p => p.id === (selectedProvider || 'mock'));
   const isCurrentUnavailable = currentProviderObj && !currentProviderObj.available;
@@ -70,11 +72,33 @@ const Navbar = memo(function Navbar({
             </div>
           </div>
 
-          {systemHealth && (
-            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-900/90 border border-zinc-800/80 text-[11px] font-medium text-zinc-300">
+          {healthStatus === 'healthy' && systemHealth && (
+            <div 
+              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-900/90 border border-zinc-800/80 text-[11px] font-medium text-emerald-400"
+              title={`Service: ${systemHealth.service} (v${systemHealth.version}) - Engine: ${systemHealth.active_provider}`}
+            >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50" />
-              <span className="capitalize">{systemHealth.status}</span>
+              <span>System Online</span>
             </div>
+          )}
+          {healthStatus === 'checking' && (
+            <div 
+              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-900/90 border border-zinc-800/80 text-[11px] font-medium text-amber-400/90"
+              title="Connecting to backend service (Render free tier spin-up takes ~30-50s on cold start)"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+              <span>Connecting...</span>
+            </div>
+          )}
+          {healthStatus === 'offline' && (
+            <button 
+              onClick={onRetryHealth}
+              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-red-950/20 border border-red-800/40 text-[11px] font-medium text-red-400 hover:bg-red-950/40 transition"
+              title="Backend service unreachable. Click to retry connection."
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+              <span>Offline (Retry)</span>
+            </button>
           )}
         </div>
 
