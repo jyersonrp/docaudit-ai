@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class GeminiProvider(BaseLLMProvider):
     def __init__(self, api_key: Optional[str] = None):
         self._api_key = api_key or settings.GEMINI_API_KEY
-        self._model = "gemini-2.5-flash"
+        self._model = getattr(settings, "GEMINI_MODEL", "gemini-3.6-flash")
         self._client = None
         if self._api_key:
             try:

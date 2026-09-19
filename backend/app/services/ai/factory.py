@@ -140,7 +140,7 @@ class LLMFactory:
         return [
             {
                 "id": "gemini",
-                "name": "Google Gemini (gemini-2.5-flash)",
+                "name": f"Google Gemini ({getattr(settings, 'GEMINI_MODEL', 'gemini-3.6-flash')})",
                 "available": gemini_has_key,
                 "status_message": "Ready" if gemini_has_key else "API key required (set GEMINI_API_KEY)",
                 "is_default": gemini_is_default
