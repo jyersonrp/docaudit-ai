@@ -589,3 +589,50 @@ class OllamaProvider(BaseLLMProvider):
         elif "response" in data:
             return str(data["response"])
         raise RuntimeError("Ollama returned an unexpected empty chat response structure.")
+
+    async def compare_documents(
+        self,
+        doc1_id: str,
+        doc1_name: str,
+        doc1_text: str,
+        doc1_audit: Optional[Any],
+        doc2_id: str,
+        doc2_name: str,
+        doc2_text: str,
+        doc2_audit: Optional[Any],
+        doc_type: Any
+    ) -> Any:
+        from app.models.comparison import ComparativeAuditResult
+        from app.services.ai.mock_provider import MockProvider
+
+        # Check if Ollama is connected; otherwise fallback to heuristic comparator
+        if not await self.check_connection():
+            return await MockProvider().compare_documents(
+                doc1_id, doc1_name, doc1_text, doc1_audit,
+                doc2_id, doc2_name, doc2_text, doc2_audit, doc_type
+            )
+
+        from app.core.security import build_secure_audit_prompt
+        comparison_prompt = build_secure_audit_prompt(
+            f"You are a Senior Legal Counsel. Compare DOCUMENT 1 ({doc1_name}) vs DOCUMENT 2 ({doc2_name}) "
+            f"and generate a detailed redline risk comparison:\nDOC 1:\n{doc1_text[:12000]}\n\nDOC 2:\n{doc2_text[:12000]}",
+            "",
+            max_chars=26000
+        )
+        try:
+            result_json = await self._generate_json(comparison_prompt, ComparativeAuditResult.model_json_schema())
+            result = ComparativeAuditResult.model_validate(result_json)
+            result.doc1_id = doc1_id
+            result.doc1_name = doc1_name
+            result.doc2_id = doc2_id
+            result.doc2_name = doc2_name
+            result.provider_used = self.provider_name
+            result.model_used = self.model_name
+            return result
+        except Exception as e:
+            logger.warning(f"Ollama comparative audit error ({e}), falling back to deterministic comparison.")
+            return await MockProvider().compare_documents(
+                doc1_id, doc1_name, doc1_text, doc1_audit,
+                doc2_id, doc2_name, doc2_text, doc2_audit, doc_type
+            )
+

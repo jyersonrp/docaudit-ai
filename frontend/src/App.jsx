@@ -7,6 +7,7 @@ import RagChat from './components/RagChat';
 import RawJsonViewer from './components/RawJsonViewer';
 import ExportToolbar from './components/ExportToolbar';
 import UploadModal from './components/UploadModal';
+import ComparisonViewer from './components/ComparisonViewer';
 import { api } from './services/api';
 import { 
   ShieldCheck, 
@@ -19,7 +20,8 @@ import {
   Loader2, 
   AlertCircle,
   RotateCw,
-  AlertTriangle
+  AlertTriangle,
+  GitCompare
 } from 'lucide-react';
 
 export default function App() {
@@ -35,6 +37,7 @@ export default function App() {
   const [selectedProvider, setSelectedProvider] = useState('mock');
   const [systemHealth, setSystemHealth] = useState(null);
   const [healthStatus, setHealthStatus] = useState('checking');
+  const [workspaceMode, setWorkspaceMode] = useState('audit'); // 'audit' | 'compare'
 
   // Initial data loading
   useEffect(() => {
@@ -231,10 +234,48 @@ export default function App() {
         </div>
       )}
 
+      {/* Workspace Mode Switcher */}
+      <div className="max-w-7xl w-full mx-auto px-6 pt-4 pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="inline-flex bg-zinc-900/90 border border-zinc-800 p-1 rounded-xl shadow-sm">
+          <button
+            onClick={() => setWorkspaceMode('audit')}
+            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              workspaceMode === 'audit'
+                ? 'bg-zinc-800 text-zinc-100 shadow-sm border border-zinc-700/60'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Single Document Audit</span>
+          </button>
+          <button
+            onClick={() => setWorkspaceMode('compare')}
+            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition ${
+              workspaceMode === 'compare'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <GitCompare className="w-3.5 h-3.5" />
+            <span>⚖️ Redline & Comparative Audit</span>
+          </button>
+        </div>
+      </div>
+
       {/* Main Workspace Layout */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Column: Document Repository Sidebar */}
-        <div className="lg:col-span-1 h-[780px]">
+        {workspaceMode === 'compare' ? (
+          <div className="lg:col-span-4">
+            <ComparisonViewer
+              documents={documents}
+              selectedProvider={selectedProvider}
+              onDocumentsUpdated={() => loadDocuments(false)}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Left Column: Document Repository Sidebar */}
+            <div className="lg:col-span-1 h-[780px]">
           <DocumentList
             documents={documents}
             selectedDocId={selectedDocId}
@@ -442,6 +483,8 @@ export default function App() {
             </div>
           )}
         </div>
+        </>
+        )}
       </main>
 
       {/* Upload Modal */}

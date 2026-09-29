@@ -1,5 +1,6 @@
 import re
 import uuid
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from app.models.document import DocumentChunk
 from app.models.audit import (
@@ -298,4 +299,241 @@ class MockProvider(BaseLLMProvider):
             f"The document states: \"{top_snippet}...\". "
             f"According to Section '{context_chunks[0].section or 'Standard Terms'}', this provision governs "
             f"the contractual obligations and operational constraints specified by the parties."
+        )
+
+    async def compare_documents(
+        self,
+        doc1_id: str,
+        doc1_name: str,
+        doc1_text: str,
+        doc1_audit: Optional[Any],
+        doc2_id: str,
+        doc2_name: str,
+        doc2_text: str,
+        doc2_audit: Optional[Any],
+        doc_type: Any
+    ) -> Any:
+        from app.models.comparison import (
+            ComparativeAuditResult, 
+            RiskDelta, 
+            ClauseDiff, 
+            MetricComparison, 
+            DiffChangeType, 
+            RiskImpactType
+        )
+        from app.models.document import DocumentType
+
+        # Determine scores from audits if available
+        d1_score = 32
+        d2_score = 78
+        d1_level = RiskLevel.LOW
+        d2_level = RiskLevel.HIGH
+
+        if doc1_audit:
+            if hasattr(doc1_audit, 'legal_audit') and doc1_audit.legal_audit:
+                d1_score = doc1_audit.legal_audit.overall_risk_score
+                d1_level = doc1_audit.legal_audit.overall_risk_level
+            elif hasattr(doc1_audit, 'financial_audit') and doc1_audit.financial_audit:
+                d1_score = doc1_audit.financial_audit.overall_risk_score
+                d1_level = doc1_audit.financial_audit.overall_risk_level
+
+        if doc2_audit:
+            if hasattr(doc2_audit, 'legal_audit') and doc2_audit.legal_audit:
+                d2_score = doc2_audit.legal_audit.overall_risk_score
+                d2_level = doc2_audit.legal_audit.overall_risk_level
+            elif hasattr(doc2_audit, 'financial_audit') and doc2_audit.financial_audit:
+                d2_score = doc2_audit.financial_audit.overall_risk_score
+                d2_level = doc2_audit.financial_audit.overall_risk_level
+
+        # If identical text/audits, make delta zero
+        if doc1_id == doc2_id or doc1_text.strip() == doc2_text.strip():
+            d2_score = d1_score
+            d2_level = d1_level
+
+        score_delta = d2_score - d1_score
+        if score_delta >= 20:
+            verdict = "SIGNIFICANT_RISK_INCREASE"
+            summary_text = (
+                f"Comparative audit detects a substantial escalation in legal and operational exposure (+{score_delta} risk points). "
+                f"Revision '{doc2_name}' weakens protective covenants and substantially shifts liability."
+            )
+        elif score_delta > 5:
+            verdict = "MODERATE_RISK_INCREASE"
+            summary_text = f"Revision '{doc2_name}' increases commercial exposure (+{score_delta} risk points) with several unfavorable modifications."
+        elif score_delta < -5:
+            verdict = "RISK_DECREASED"
+            summary_text = f"Revision '{doc2_name}' reflects an improved risk profile ({score_delta} risk points) with stronger protective guardrails."
+        else:
+            verdict = "NEUTRAL"
+            summary_text = f"Documents exhibit an equivalent risk posture with minor or stylistic variances (delta: {score_delta})."
+
+        risk_delta = RiskDelta(
+            doc1_score=d1_score,
+            doc2_score=d2_score,
+            score_delta=score_delta,
+            doc1_level=d1_level,
+            doc2_level=d2_level,
+            verdict=verdict,
+            summary=summary_text
+        )
+
+        clause_diffs: List[ClauseDiff] = []
+        metric_comparisons: List[MetricComparison] = []
+
+        is_financial = (doc_type == DocumentType.FINANCIAL) or ("balance sheet" in doc1_text.lower() and "balance sheet" in doc2_text.lower())
+
+        if is_financial:
+            clause_diffs = [
+                ClauseDiff(
+                    category="Auditor Opinion & Independence",
+                    doc1_clause="Unqualified / Clean Opinion under U.S. GAAP standards.",
+                    doc2_clause="Qualified Opinion due to valuation uncertainty in inventory & foreign operations.",
+                    change_type=DiffChangeType.MODIFIED,
+                    risk_impact=RiskImpactType.CRITICAL_ESCALATION,
+                    analysis="Audit opinion was downgraded from Unqualified to Qualified, indicating material non-compliance or valuation uncertainty."
+                ),
+                ClauseDiff(
+                    category="Debt Covenants & Leverage",
+                    doc1_clause="Debt-to-Equity: 0.27x ($32.0M Long-Term Debt)",
+                    doc2_clause="Debt-to-Equity: 0.85x ($98.5M Long-Term Debt; Senior Secured Notes)",
+                    change_type=DiffChangeType.MODIFIED,
+                    risk_impact=RiskImpactType.ADVERSE,
+                    analysis="Significant debt accumulation triples leverage ratio, tightening headroom against solvency covenants."
+                ),
+                ClauseDiff(
+                    category="Contingent Litigation Reserves",
+                    doc1_clause="Accrued reserve of $1.8M for patent assertion and tax reviews.",
+                    doc2_clause="Expanded legal proceedings reserve of $12.5M for class action litigation.",
+                    change_type=DiffChangeType.MODIFIED,
+                    risk_impact=RiskImpactType.ADVERSE,
+                    analysis="Litigation reserve increased sevenfold, representing substantial near-term cash drain risk."
+                )
+            ]
+            metric_comparisons = [
+                MetricComparison(
+                    metric_name="Gross Margin",
+                    doc1_value="74.2%",
+                    doc2_value="62.1%",
+                    change_summary="Margin contracted by 12.1% due to elevated cloud hosting and COGS inflation.",
+                    is_risk_increase=True
+                ),
+                MetricComparison(
+                    metric_name="Operating Margin",
+                    doc1_value="14.7%",
+                    doc2_value="4.8%",
+                    change_summary="Compressed operating margin nearing break-even threshold.",
+                    is_risk_increase=True
+                ),
+                MetricComparison(
+                    metric_name="Current Ratio (Liquidity)",
+                    doc1_value="2.72x",
+                    doc2_value="1.45x",
+                    change_summary="Working capital buffer narrowed from robust 2.72x to 1.45x.",
+                    is_risk_increase=True
+                )
+            ]
+            takeaways = [
+                "Overall financial stability weakened primarily due to aggressive debt expansion and litigation exposure.",
+                "Auditor qualification requires immediate review by Audit Committee prior to executive sign-off.",
+                "Operating margin compression suggests pricing pressure or unabsorbed capacity costs."
+            ]
+            strategies = [
+                "Seek waiver or covenant modification from senior lenders before debt maturity.",
+                "Conduct audit reconciliation on foreign inventory valuation to resolve auditor qualification.",
+                "Ring-fence IP litigation exposure with specialized indemnity insurance."
+            ]
+        else:
+            clause_diffs = [
+                ClauseDiff(
+                    category="Limitation of Liability",
+                    doc1_clause="Liability capped at fees paid in preceding 12 months (maximum $50,000 USD). Mutual exclusion of consequential damages.",
+                    doc2_clause="Neither party's liability under this Agreement shall be subject to any financial ceiling or monetary cap. Uncapped liability applies to all breaches.",
+                    change_type=DiffChangeType.MODIFIED,
+                    risk_impact=RiskImpactType.CRITICAL_ESCALATION,
+                    analysis="Revision Document 2 deletes the monetary cap entirely. This exposes the enterprise to catastrophic, open-ended damages with no financial backstop."
+                ),
+                ClauseDiff(
+                    category="Termination for Convenience & Notice",
+                    doc1_clause="Either party may terminate without cause upon sixty (60) days prior written notice.",
+                    doc2_clause="Customer may terminate at any time upon seven (7) days written notice. Vendor possesses no termination for convenience rights.",
+                    change_type=DiffChangeType.MODIFIED,
+                    risk_impact=RiskImpactType.ADVERSE,
+                    analysis="Termination notice shortened from 60 days to 7 days and converted into a completely one-sided unilateral prerogative against the vendor."
+                ),
+                ClauseDiff(
+                    category="Indemnification Scope",
+                    doc1_clause="Mutual reciprocal indemnification for gross negligence and willful misconduct.",
+                    doc2_clause="Vendor shall defend, indemnify, and hold harmless Customer from any and all third-party claims, costs, or investigations arising directly or indirectly.",
+                    change_type=DiffChangeType.MODIFIED,
+                    risk_impact=RiskImpactType.ADVERSE,
+                    analysis="Reciprocity stripped away; indemnity obligation broadened to indirect claims without requirement of proven negligence or fault."
+                ),
+                ClauseDiff(
+                    category="Governing Law & Dispute Forum",
+                    doc1_clause="Governed by the State of Delaware; federal and state courts in New Castle County.",
+                    doc2_clause="Governed by English Law; mandatory binding arbitration under LCIA rules seated in London, UK.",
+                    change_type=DiffChangeType.MODIFIED,
+                    risk_impact=RiskImpactType.NEUTRAL,
+                    analysis="Forum moved from domestic court litigation to international commercial arbitration. Increases cross-border arbitration costs."
+                ),
+                ClauseDiff(
+                    category="Service Level Agreement & Liquidated Damages",
+                    doc1_clause="99.5% service uptime commitment with standard service credit remedy.",
+                    doc2_clause="99.99% uptime commitment with mandatory liquidated damages of $10,000 per downtime hour payable in cash within 15 days.",
+                    change_type=DiffChangeType.ADDED,
+                    risk_impact=RiskImpactType.CRITICAL_ESCALATION,
+                    analysis="Liquidated damages clause introduced, replacing standard credits with direct cash penalties that bypass customary damage mitigation."
+                )
+            ]
+            metric_comparisons = [
+                MetricComparison(
+                    metric_name="Liability Monetary Cap",
+                    doc1_value="$50,000 (12-Mo Fees)",
+                    doc2_value="Uncapped (Unlimited)",
+                    change_summary="Financial ceiling completely removed.",
+                    is_risk_increase=True
+                ),
+                MetricComparison(
+                    metric_name="Termination Notice Period",
+                    doc1_value="60 Days (Mutual)",
+                    doc2_value="7 Days (Unilateral)",
+                    change_summary="Runway reduced by 88% and made unilateral.",
+                    is_risk_increase=True
+                ),
+                MetricComparison(
+                    metric_name="SLA Downtime Penalty",
+                    doc1_value="Service Credits",
+                    doc2_value="$10,000/hr Cash Penalty",
+                    change_summary="Direct monetary liability introduced for minor outages.",
+                    is_risk_increase=True
+                )
+            ]
+            takeaways = [
+                "Counterparty's redline introduces high-severity commercial risks by eliminating the liability ceiling.",
+                "Unilateral 7-day termination creates operational instability and unhedged resource commitments.",
+                "Cash liquidated damages on SLA metrics create an unacceptable financial exposure point."
+            ]
+            strategies = [
+                "Strict Counter-Proposal: Reject uncapped liability; propose a compromise cap at 2x annual contract value ($100k).",
+                "Restore a mutual 30-day minimum termination notice for both parties to prevent abrupt cancellations.",
+                "Strike the $10,000/hr cash penalty; replace with tiered recurring service credits capped at 20% of monthly billing."
+            ]
+
+        comparison_id = f"cmp-{uuid.uuid4().hex[:10]}"
+        return ComparativeAuditResult(
+            id=comparison_id,
+            doc1_id=doc1_id,
+            doc1_name=doc1_name,
+            doc2_id=doc2_id,
+            doc2_name=doc2_name,
+            doc_type=doc_type or DocumentType.LEGAL,
+            completed_at=datetime.now(timezone.utc),
+            provider_used=self.provider_name,
+            model_used=self.model_name,
+            risk_delta=risk_delta,
+            executive_comparison=summary_text,
+            clause_diffs=clause_diffs,
+            metric_comparisons=metric_comparisons,
+            key_takeaways=takeaways,
+            renegotiation_strategy=strategies
         )

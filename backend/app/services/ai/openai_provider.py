@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Optional
+from typing import List, Optional, Any
 from app.models.document import DocumentChunk
 from app.models.audit import LegalContractAudit, FinancialReportAudit, CustomAudit
 from app.services.ai.base import BaseLLMProvider
@@ -119,3 +119,56 @@ class OpenAIProvider(BaseLLMProvider):
         except Exception as e:
             logger.error(f"OpenAI chat error: {e}")
             raise RuntimeError(f"OpenAI API error during chat: {str(e)}") from e
+
+    async def compare_documents(
+        self,
+        doc1_id: str,
+        doc1_name: str,
+        doc1_text: str,
+        doc1_audit: Optional[Any],
+        doc2_id: str,
+        doc2_name: str,
+        doc2_text: str,
+        doc2_audit: Optional[Any],
+        doc_type: Any
+    ) -> Any:
+        from app.models.comparison import ComparativeAuditResult
+        from app.services.ai.mock_provider import MockProvider
+
+        if not self._client:
+            return await MockProvider().compare_documents(
+                doc1_id, doc1_name, doc1_text, doc1_audit,
+                doc2_id, doc2_name, doc2_text, doc2_audit, doc_type
+            )
+
+        comparison_prompt = (
+            f"You are a Senior Legal Counsel and Enterprise Auditor. Compare the following two documents in detail.\n"
+            f"DOCUMENT 1 (Baseline: {doc1_name}):\n{doc1_text[:20000]}\n\n"
+            f"DOCUMENT 2 (Revision: {doc2_name}):\n{doc2_text[:20000]}\n\n"
+            f"Perform a comprehensive redline comparison: identify added, modified, or removed clauses, "
+            f"calculate the risk delta, evaluate commercial impact, and provide renegotiation strategies."
+        )
+
+        try:
+            completion = await self._client.beta.chat.completions.parse(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": "You are an expert contract auditor and corporate risk analyst."},
+                    {"role": "user", "content": comparison_prompt}
+                ],
+                response_format=ComparativeAuditResult
+            )
+            result = completion.choices[0].message.parsed
+            result.doc1_id = doc1_id
+            result.doc1_name = doc1_name
+            result.doc2_id = doc2_id
+            result.doc2_name = doc2_name
+            result.provider_used = self.provider_name
+            result.model_used = self.model_name
+            return result
+        except Exception as e:
+            logger.warning(f"OpenAI comparative audit error ({e}), falling back to deterministic comparison.")
+            return await MockProvider().compare_documents(
+                doc1_id, doc1_name, doc1_text, doc1_audit,
+                doc2_id, doc2_name, doc2_text, doc2_audit, doc_type
+            )

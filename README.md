@@ -4,6 +4,7 @@
 ### *Autonomous Enterprise Document Risk Extraction & Intelligent Audit Engine*
 
 [![CI Pipeline](https://github.com/jyersonrp/docaudit-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/jyersonrp/docaudit-ai/actions/workflows/ci.yml)
+[![Pytest](https://img.shields.io/badge/Pytest-72%20Passed-success?style=for-the-badge&logo=pytest&logoColor=white)](backend/tests)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Pydantic](https://img.shields.io/badge/Pydantic-v2.13-E92063?style=for-the-badge&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
@@ -38,6 +39,7 @@ Engineered with a **zero-trust, high-resilience architecture**, DocAudit AI pair
 | **Grounding & Evidence** | Manual highlighter & notes | Vague summaries with no citations | **Sub-50ms Hybrid RAG with Verbatim Page Citations** |
 | **Provider Flexibility** | N/A (human labor) | Hardcoded single vendor | **Pluggable Factory (Gemini, OpenAI, Ollama, Heuristic)** |
 | **Outage & Quota Resilience** | Process halts completely | Crashes with HTTP 429 / 503 errors | **Zero-Latency Deterministic Fallback Engine** |
+| **Comparative Redline** | Manual line-by-line reading | No risk context or exposure scoring | **Clause Redlines + Risk Shift Delta Quantification** |
 | **Security Posture** | Unaudited file shares | Raw file dumping; injection risk | **OWASP Top 10 Hardened (Magic Bytes, Traversal, Fences)** |
 | **Executive Deliverables** | Ad-hoc summary emails | Copy-pasted markdown snippets | **Publication-Grade ReportLab PDF, MD & JSON** |
 
@@ -132,6 +134,13 @@ DocAudit AI avoids single-vendor lock-in through a clean `BaseLLMProvider` contr
 - **Executive Markdown**: Formatted for instant pasting into Notion, GitHub Discussions, or corporate wikis.
 - **Structured JSON**: Formatted against Pydantic v2 schemas for direct ingestion by enterprise ERP/CLM systems.
 
+### 6. 🔄 Multi-Document Comparative Redline Audit & Risk Delta
+- **Automated Version Contrast**: Compare baseline contracts against counterparty redline revisions (e.g. Master Services Agreement v1 vs v2).
+- **Clause-by-Clause Redlining**: Classifies amendments into `MODIFIED`, `DELETED`, or `ADDED` with verbatim excerpts.
+- **Risk Shift Scoring**: Quantifies commercial and legal risk impact (`CRITICAL_ESCALATION`, `ADVERSE_INCREASE`, `FAVORABLE_REDUCTION`, `NEUTRAL`) and calculates net exposure delta.
+- **Strategic Renegotiation Playbook**: Generates step-by-step counter-proposals to reclaim commercial leverage.
+- **Comparative Vector PDF**: One-click download of an executive redline comparison report built with ReportLab.
+
 ---
 
 ## 🌐 Live Production Deployment
@@ -219,6 +228,10 @@ docker-compose up --build
 | `GET` | `/api/v1/export/{doc_id}/pdf` | Download publication-grade executive PDF report |
 | `GET` | `/api/v1/export/{doc_id}/markdown` | Download formatted executive Markdown report |
 | `GET` | `/api/v1/export/{doc_id}/json` | Download raw structured JSON data |
+| `POST` | `/api/v1/compare` | Compare two audited documents and generate redline risk delta |
+| `POST` | `/api/v1/compare/sample-pair` | Seed & audit MSA v1 (Baseline) vs v2 (Redline) sample pair |
+| `GET` | `/api/v1/compare/{id}` | Retrieve comparative redline audit result by ID |
+| `GET` | `/api/v1/compare/{id}/pdf` | Download publication-grade comparative redline vector PDF |
 
 ### Example cURL Queries
 
@@ -227,7 +240,12 @@ docker-compose up --build
 curl -X POST "http://localhost:8000/api/v1/documents/sample?sample_type=legal"
 ```
 
-#### 2. Query Document via Grounded RAG with Citations
+#### 2. Seed & Compare MSA v1 vs v2 Redline Sample Pair
+```bash
+curl -X POST "http://localhost:8000/api/v1/compare/sample-pair"
+```
+
+#### 3. Query Document via Grounded RAG with Citations
 ```bash
 curl -X POST "http://localhost:8000/api/v1/chat/query" \
   -H "Content-Type: application/json" \
@@ -238,7 +256,7 @@ curl -X POST "http://localhost:8000/api/v1/chat/query" \
   }'
 ```
 
-#### 3. Download Executive PDF Audit
+#### 4. Download Executive PDF Audit
 ```bash
 curl -O -J "http://localhost:8000/api/v1/export/<DOC_ID>/pdf"
 ```
@@ -256,24 +274,26 @@ pytest -v
 
 ```
 ============================= test session starts =============================
-collected 66 items
+collected 72 items
 
-backend/tests/test_ai_providers.py ......                                [  9%]
-backend/tests/test_api_endpoints.py ...........                          [ 25%]
-backend/tests/test_chunker.py ..                                         [ 28%]
-backend/tests/test_extractor.py ...                                      [ 33%]
-backend/tests/test_ollama_provider.py ...................                [ 62%]
-backend/tests/test_report_generator.py ....                              [ 68%]
-backend/tests/test_security_and_optimizations.py ...................     [ 96%]
+backend/tests/test_ai_providers.py ......                                [  8%]
+backend/tests/test_api_endpoints.py ...........                          [ 23%]
+backend/tests/test_chunker.py ..                                         [ 26%]
+backend/tests/test_comparison.py ......                                  [ 34%]
+backend/tests/test_extractor.py ...                                      [ 38%]
+backend/tests/test_ollama_provider.py ...................                [ 65%]
+backend/tests/test_report_generator.py ....                              [ 70%]
+backend/tests/test_security_and_optimizations.py ...................     [ 97%]
 backend/tests/test_vector_store.py ..                                    [100%]
 
-======================= 66 passed, 0 failures in 18.2s ========================
+======================= 72 passed, 0 failures in 12.2s ========================
 ```
 
 ### Test Suite Breakdown
 - `test_ai_providers.py`: Verifies mock heuristic extraction, schema compliance, and LLMFactory provider auto-resolution.
 - `test_api_endpoints.py`: Tests document upload, sample seeding, RAG query with citations, and multi-format exports.
 - `test_chunker.py`: Validates clause boundaries, section heading detection, and overlap invariants.
+- `test_comparison.py`: Verifies multi-document comparison endpoints, risk shift calculation, redline PDF generation, and sample-pair seeding.
 - `test_extractor.py`: Tests PDF and Word DOCX text extraction, table layout parsing, and corrupted file handling.
 - `test_ollama_provider.py`: Validates local Ollama API connectivity, error handling, retries, and model checks.
 - `test_report_generator.py`: Verifies vector PDF binary generation, Markdown templating, and JSON serialization.
@@ -292,25 +312,25 @@ docaudit-ai/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   └── endpoints/       # REST routes (documents, audit, chat, export)
+│   │   │   └── endpoints/       # REST routes (documents, audit, chat, export, comparison)
 │   │   ├── core/
 │   │   │   ├── config.py        # Pydantic Settings & environment variables
 │   │   │   ├── middleware.py    # OWASP security headers, rate limiter, request ID
 │   │   │   └── security.py      # Magic bytes validation, path traversal, prompt defense
-│   │   ├── models/              # Pydantic v2 domain schemas (Legal, Financial, Custom)
+│   │   ├── models/              # Pydantic v2 domain schemas (Legal, Financial, Comparison)
 │   │   ├── services/
 │   │   │   ├── ai/              # Multi-Provider Factory (Gemini, OpenAI, Ollama, Mock)
 │   │   │   ├── cache/           # Memory LRU Cache with TTL
 │   │   │   ├── document/        # Text extraction (PyPDF, docx) & semantic chunking
-│   │   │   ├── report/          # ReportLab PDF, Markdown, and JSON generators
+│   │   │   ├── export/          # ReportLab PDF, Markdown, and JSON generators
 │   │   │   └── vector/          # SQLite vector store & TF-IDF hybrid search
 │   │   ├── workers/             # Asynchronous audit worker & SQLite WAL database
 │   │   └── main.py              # FastAPI application entrypoint
-│   ├── tests/                   # 66 comprehensive pytest test suites
+│   ├── tests/                   # 72 comprehensive pytest test suites
 │   └── requirements.txt         # Production backend dependencies
 ├── frontend/
 │   ├── src/
-│   │   ├── components/          # Modern Sleek Dark components (Navbar, RiskGauge, RAG)
+│   │   ├── components/          # Sleek Dark components (Navbar, RiskGauge, RAG, ComparisonViewer)
 │   │   ├── services/            # Axios API client with dynamic base URL
 │   │   ├── App.jsx              # Main dashboard view with segmented control tabs
 │   │   └── index.css            # Tailwind typography, hairline borders, custom scrollbars

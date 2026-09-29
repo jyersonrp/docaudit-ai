@@ -115,5 +115,40 @@ export const api = {
 
   getExportUrl(docId, format = 'pdf') {
     return `${API_BASE}/export/${docId}/${format}`;
+  },
+
+  async compareDocuments(doc1Id, doc2Id, provider = null) {
+    const res = await fetch(`${API_BASE}/compare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ doc1_id: doc1Id, doc2_id: doc2Id, provider }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Comparison failed' }));
+      throw new Error(err.detail || 'Comparison failed');
+    }
+    return res.json();
+  },
+
+  async loadComparisonSamplePair(provider = null) {
+    const query = provider ? `?provider=${encodeURIComponent(provider)}` : '';
+    const res = await fetch(`${API_BASE}/compare/sample-pair${query}`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to seed comparison sample pair' }));
+      throw new Error(err.detail || 'Failed to seed comparison sample pair');
+    }
+    return res.json();
+  },
+
+  async getComparison(comparisonId) {
+    const res = await fetch(`${API_BASE}/compare/${comparisonId}`);
+    if (!res.ok) throw new Error('Failed to fetch comparison');
+    return res.json();
+  },
+
+  getComparisonPdfUrl(comparisonId) {
+    return `${API_BASE}/compare/${comparisonId}/pdf`;
   }
 };

@@ -460,3 +460,142 @@ class ReportGenerator:
         pdf_bytes = buffer.getvalue()
         buffer.close()
         return pdf_bytes
+
+    @classmethod
+    def generate_comparison_pdf(cls, comparison: Any) -> bytes:
+        from app.models.comparison import ComparativeAuditResult
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
+            bottomMargin=36
+        )
+
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CmpTitle',
+            parent=styles['Heading1'],
+            fontSize=20,
+            leading=24,
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=4
+        )
+        h2_style = ParagraphStyle(
+            'CmpH2',
+            parent=styles['Heading2'],
+            fontSize=13,
+            leading=16,
+            textColor=colors.HexColor("#1E293B"),
+            spaceBefore=12,
+            spaceAfter=6
+        )
+        meta_style = ParagraphStyle('CmpMeta', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor("#64748B"))
+        body_style = ParagraphStyle('CmpBody', parent=styles['Normal'], fontSize=9, leading=12, textColor=colors.HexColor("#334155"))
+        cell_style = ParagraphStyle('CmpCell', parent=styles['Normal'], fontSize=8, leading=10, textColor=colors.HexColor("#334155"))
+        cell_bold = ParagraphStyle('CmpCellB', parent=cell_style, fontName="Helvetica-Bold")
+
+        delta = comparison.risk_delta
+        delta_color = colors.HexColor("#DC2626") if delta.score_delta > 0 else (colors.HexColor("#166534") if delta.score_delta < 0 else colors.HexColor("#475569"))
+        delta_sign = f"+{delta.score_delta}" if delta.score_delta > 0 else f"{delta.score_delta}"
+
+        story = []
+
+        # Header Title
+        story.append(Paragraph("DocAudit AI &mdash; Redline Comparative Audit", title_style))
+        story.append(Paragraph(f"<b>Baseline Document:</b> {xml_escape(comparison.doc1_name)} &nbsp;&bull;&nbsp; <b>Revision:</b> {xml_escape(comparison.doc2_name)}", meta_style))
+        story.append(Paragraph(f"Generated on {comparison.completed_at.strftime('%Y-%m-%d %H:%M:%S UTC')} via {xml_escape(comparison.provider_used.upper())} ({xml_escape(comparison.model_used)})", meta_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#CBD5E1"), spaceBefore=8, spaceAfter=10))
+
+        # Risk Delta KPI Box
+        kpi_data = [
+            [
+                Paragraph("<b>Baseline Document (v1)</b>", cell_bold),
+                Paragraph("<b>Revised Document (v2)</b>", cell_bold),
+                Paragraph("<b>Comparative Risk Shift</b>", cell_bold)
+            ],
+            [
+                Paragraph(f"<font size=14><b>{delta.doc1_score} / 100</b></font><br/>Tier: {delta.doc1_level.value}", body_style),
+                Paragraph(f"<font size=14><b>{delta.doc2_score} / 100</b></font><br/>Tier: {delta.doc2_level.value}", body_style),
+                Paragraph(f"<font size=14 color='{delta_color.hexval()}'><b>{delta_sign} pts</b></font><br/><b>{delta.verdict.replace('_', ' ')}</b>", body_style)
+            ]
+        ]
+        t_kpi = Table(kpi_data, colWidths=[180, 180, 180])
+        t_kpi.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#CBD5E1")),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        story.append(t_kpi)
+        story.append(Spacer(1, 10))
+
+        # Executive Summary
+        story.append(Paragraph("1. Executive Redline Assessment", h2_style))
+        story.append(Paragraph(xml_escape(comparison.executive_comparison or delta.summary), body_style))
+        story.append(Spacer(1, 10))
+
+        # Clause Comparison Table
+        if comparison.clause_diffs:
+            story.append(Paragraph("2. Clause-by-Clause Redline Diff Analysis", h2_style))
+            diff_headers = [
+                Paragraph("<b>Clause & Category</b>", cell_bold),
+                Paragraph("<b>Change & Risk Impact</b>", cell_bold),
+                Paragraph("<b>Baseline vs. Revision Analysis</b>", cell_bold)
+            ]
+            diff_rows = [diff_headers]
+
+            for diff in comparison.clause_diffs:
+                badge_color = colors.HexColor("#DC2626") if "CRITICAL" in diff.risk_impact.value else (
+                    colors.HexColor("#D97706") if "ADVERSE" in diff.risk_impact.value else colors.HexColor("#166534")
+                )
+                status_block = f"<font color='{badge_color.hexval()}'><b>[{diff.risk_impact.value.replace('_', ' ')}]</b></font><br/><font color='#64748B'>Type: {diff.change_type.value}</font>"
+                
+                content_block = (
+                    f"<b>Baseline (v1):</b> {xml_escape(diff.doc1_clause or 'N/A')}<br/>"
+                    f"<b>Revision (v2):</b> {xml_escape(diff.doc2_clause or 'N/A')}<br/>"
+                    f"<b>Legal/Commercial Impact:</b> <i>{xml_escape(diff.analysis)}</i>"
+                )
+                diff_rows.append([
+                    Paragraph(f"<b>{xml_escape(diff.category)}</b>", cell_style),
+                    Paragraph(status_block, cell_style),
+                    Paragraph(content_block, cell_style)
+                ])
+
+            t_diff = Table(diff_rows, colWidths=[120, 110, 310])
+            t_diff.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#E2E8F0")),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            story.append(t_diff)
+            story.append(Spacer(1, 10))
+
+        # Strategic Renegotiation Advice
+        if comparison.renegotiation_strategy:
+            story.append(Paragraph("3. Strategic Counter-Proposals & Next Steps", h2_style))
+            strat_rows = []
+            for idx, strat in enumerate(comparison.renegotiation_strategy, 1):
+                strat_rows.append([
+                    Paragraph(f"<b>{idx}.</b>", cell_bold),
+                    Paragraph(xml_escape(strat), body_style)
+                ])
+            t_strat = Table(strat_rows, colWidths=[20, 520])
+            t_strat.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ]))
+            story.append(t_strat)
+
+        doc.build(story)
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        return pdf_bytes

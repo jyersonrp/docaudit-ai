@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Any
 from app.models.document import DocumentChunk
 from app.models.audit import LegalContractAudit, FinancialReportAudit, CustomAudit
 
@@ -28,4 +28,19 @@ class BaseLLMProvider(ABC):
 
     @abstractmethod
     async def chat(self, question: str, context_chunks: List[DocumentChunk]) -> str:
+        pass
+
+    @abstractmethod
+    async def compare_documents(
+        self,
+        doc1_id: str,
+        doc1_name: str,
+        doc1_text: str,
+        doc1_audit: Optional[Any],
+        doc2_id: str,
+        doc2_name: str,
+        doc2_text: str,
+        doc2_audit: Optional[Any],
+        doc_type: Any
+    ) -> Any:
         pass

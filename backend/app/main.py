@@ -2,7 +2,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.endpoints import documents, audit, chat, export
+from app.api.endpoints import documents, audit, chat, export, comparison
 from app.services.ai.factory import LLMFactory
 
 logging.basicConfig(
@@ -52,6 +52,7 @@ app.include_router(documents.router, prefix=f"{settings.API_V1_PREFIX}/documents
 app.include_router(audit.router, prefix=f"{settings.API_V1_PREFIX}/audit", tags=["Audit"])
 app.include_router(chat.router, prefix=f"{settings.API_V1_PREFIX}/chat", tags=["RAG Chat"])
 app.include_router(export.router, prefix=f"{settings.API_V1_PREFIX}/export", tags=["Export"])
+app.include_router(comparison.router, prefix=f"{settings.API_V1_PREFIX}/compare", tags=["Comparative Audit"])
 
 @app.get("/health", tags=["Health"])
 async def health_check():
